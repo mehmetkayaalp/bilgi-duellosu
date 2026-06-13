@@ -228,6 +228,42 @@ const DATA = {
     { a: { text: 'Antik Olimpiyat Oyunları\'nın başlaması', year: -776 }, b: { text: 'Büyük İskender\'in doğumu', year: -356 }, fact: 'İlk Olimpiyatlar, Büyük İskender\'den 420 yıl öncedir.', d: 3 },
   ],
 
+  // ---------- KATEGORİ: FUTBOL ----------
+  // Türk futbolu sorulari (4 şıklı). Tartışmalı/eskiyebilen verilerden kaçınıldı.
+  futbol: [
+    // ---- Çok Kolay (d: 0) ----
+    { question: 'Galatasaray\'ın renkleri hangisidir?', answer: 'Sarı-Kırmızı', wrong: ['Siyah-Beyaz', 'Sarı-Lacivert', 'Bordo-Mavi'], fact: 'Galatasaray\'ın renkleri 1908\'de "ateş ve kan" temasıyla kabul edildi.', d: 0 },
+    { question: 'Fenerbahçe hangi renkleri giyer?', answer: 'Sarı-Lacivert', wrong: ['Sarı-Kırmızı', 'Siyah-Beyaz', 'Yeşil-Beyaz'], fact: 'Sarı geleceğe duyulan kıskançlığı, lacivert ise asaleti simgeler.', d: 0 },
+    { question: 'Beşiktaş\'ın renkleri nedir?', answer: 'Siyah-Beyaz', wrong: ['Sarı-Kırmızı', 'Bordo-Mavi', 'Yeşil-Beyaz'], fact: '1909\'a kadar renkler kırmızı-beyazdı; Trablusgarp Savaşı sonrası yas tutmak için siyaha çevrildi.', d: 0 },
+    { question: 'Beşiktaş\'ın sembolü hangi hayvandır?', answer: 'Kartal', wrong: ['Aslan', 'Kanarya', 'Boğa'], fact: 'Kartal, Beşiktaş\'ın simgesidir; taraftarlara da "Kartal" denir.', d: 0 },
+    { question: 'Galatasaray\'ın sembolü hangi hayvandır?', answer: 'Aslan', wrong: ['Kartal', 'Kanarya', 'Boğa'], fact: 'Galatasaray\'ın simgesi aslandır; taraftarlara "Aslan" da denir.', d: 0 },
+    { question: 'Fenerbahçe\'nin sembolü hangi kuştur?', answer: 'Kanarya', wrong: ['Kartal', 'Aslan', 'Boğa'], fact: 'Sarı-lacivert renkler kanaryayı çağrıştırdığı için Fenerbahçeli taraftarlara "Kanarya" da denir.', d: 0 },
+    { question: 'Türkiye milli takım forması genelde hangi renktedir?', answer: 'Kırmızı-Beyaz', wrong: ['Sarı-Lacivert', 'Siyah-Beyaz', 'Mavi-Beyaz'], fact: 'Milli formanın baskın rengi, Türk bayrağındaki gibi kırmızı ve beyazdır.', d: 0 },
+    { question: 'Futbol maçında bir takımda sahada kaç oyuncu olur?', answer: '11', wrong: ['9', '10', '12'], fact: 'Kaleci dahil 11 oyuncu sahada yer alır.', d: 0 },
+
+    // ---- Kolay (d: 1) ----
+    { question: 'Süper Lig\'in ilk (1959) şampiyonu hangi takımdır?', answer: 'Fenerbahçe', wrong: ['Galatasaray', 'Beşiktaş', 'Trabzonspor'], fact: '1959\'da Milli Lig adıyla başlayan organizasyonun ilk şampiyonu Fenerbahçe oldu.', d: 1 },
+    { question: 'Galatasaray hangi yıl UEFA Kupası\'nı kazandı?', answer: '2000', wrong: ['1998', '2002', '2008'], fact: '17 Mayıs 2000\'de Kopenhag\'da Arsenal\'i penaltılarla yenerek kazandı; bir Türk takımının ilk Avrupa kupasıdır.', d: 1 },
+    { question: '"Üç büyükler" denilen İstanbul kulüpleri Galatasaray, Fenerbahçe ve hangisidir?', answer: 'Beşiktaş', wrong: ['İstanbulspor', 'Kasımpaşa', 'Başakşehir'], fact: '"Üç büyükler" terimi Galatasaray, Fenerbahçe ve Beşiktaş için kullanılır.', d: 1 },
+    { question: '1903 yılında kurulan, Türkiye\'nin en eski spor kulüplerinden biri olan takım hangisidir?', answer: 'Beşiktaş', wrong: ['Galatasaray', 'Fenerbahçe', 'Trabzonspor'], fact: 'Beşiktaş 19 Mart 1903\'te kuruldu; Galatasaray 1905, Fenerbahçe 1907\'dedir.', d: 1 },
+
+    // ---- Doğru/Yanlış havasında olanlar Kolay'a ----
+    { question: 'Süper Lig\'de bugüne kadar sadece İstanbul takımları şampiyon olmuştur. Doğru mu, yanlış mı?', answer: 'Yanlış', wrong: ['Doğru', 'Kısmen', 'Bilinmiyor'], fact: 'Trabzonspor, Bursaspor ve Başakşehir gibi İstanbul dışı takımlar da şampiyon olmuştur.', d: 1 },
+
+    // ---- Orta (d: 2) ----
+    { question: 'Türkiye 2002 FIFA Dünya Kupası\'nda kaçıncı olmuştur?', answer: 'Üçüncü', wrong: ['Birinci', 'İkinci', 'Dördüncü'], fact: 'Türkiye, 2002 Güney Kore-Japonya organizasyonunda tarihindeki en iyi sonucu alarak 3. oldu.', d: 2 },
+    { question: '2002 Dünya Kupası\'nda Türkiye\'nin teknik direktörü kimdi?', answer: 'Şenol Güneş', wrong: ['Fatih Terim', 'Mustafa Denizli', 'Ersun Yanal'], fact: 'Şenol Güneş yönetimindeki Türkiye, üçüncülük maçında Güney Kore\'yi 3-2 yendi.', d: 2 },
+    { question: '2002 Dünya Kupası üçüncülük maçında Türkiye\'nin rakibi hangi takımdı?', answer: 'Güney Kore', wrong: ['Japonya', 'ABD', 'Senegal'], fact: 'Türkiye, ev sahibi Güney Kore\'yi 3-2 yenerek bronz madalya kazandı.', d: 2 },
+    { question: 'Euro 2008\'de Türkiye yarı finalde hangi takıma elendi?', answer: 'Almanya', wrong: ['Fransa', 'Hollanda', 'İspanya'], fact: 'Yarı finalde Almanya\'ya 3-2 yenilen Türkiye, turnuvada büyük takdir topladı.', d: 2 },
+    { question: 'Bursaspor hangi sezonun sonunda Süper Lig\'i ilk kez şampiyon bitirdi?', answer: '2009-10', wrong: ['2007-08', '2011-12', '2015-16'], fact: 'Bursaspor 2009-10\'da, İstanbul dışındaki ikinci şampiyonluğu (Trabzon\'dan sonra) getirdi.', d: 2 },
+
+    // ---- Zor (d: 3) ----
+    { question: 'Süper Lig tarihinde namağlup şampiyon olan tek takım hangisidir?', answer: 'Beşiktaş', wrong: ['Galatasaray', 'Fenerbahçe', 'Trabzonspor'], fact: 'Beşiktaş 1991-92 sezonunda 30 maçta hiç yenilmeden şampiyon olarak bu rekoru elinde tutuyor.', d: 3 },
+    { question: 'Süper Lig şampiyonluğu yaşamış 6. takım hangisidir?', answer: 'İstanbul Başakşehir', wrong: ['Konyaspor', 'Sivasspor', 'Antalyaspor'], fact: 'Başakşehir 2019-20\'de ilk Süper Lig şampiyonluğunu kazanarak 6. farklı şampiyon oldu.', d: 3 },
+    { question: '2017-18 UEFA Şampiyonlar Ligi grup aşamasında namağlup geçerek grup birinciliği elde eden Türk takımı hangisidir?', answer: 'Beşiktaş', wrong: ['Galatasaray', 'Fenerbahçe', 'Trabzonspor'], fact: 'Beşiktaş, Porto-Leipzig-Monaco grubunda 4G 2B ile namağlup birinci tamamlayıp son 16\'ya çıktı.', d: 3 },
+    { question: 'Beşiktaş\'ın 1989-90, 1990-91 ve 1991-92 sezonlarında üst üste 3 şampiyonluk kazandığı dönemin teknik direktörü kimdir?', answer: 'Gordon Milne', wrong: ['Christoph Daum', 'Mircea Lucescu', 'Şenol Güneş'], fact: 'İngiliz teknik adam Gordon Milne, Beşiktaş\'ın "Kara Kartallar" lakaplı kadrosuyla bu rekoru imzaladı.', d: 3 },
+  ],
+
   // ---------- KATEGORİ: YAZ BAKALIM (DÜELLO) ----------
   duello: [
     {
@@ -295,6 +331,27 @@ const DATA = {
       note: 'Brezilya tek başına kıtanın neredeyse yarısını kaplar.', d: 3,
     },
     {
+      prompt: 'İstanbul\'un "üç büyük" takımlarını yazın.',
+      answers: [
+        { name: 'Galatasaray', aliases: ['gs'] },
+        { name: 'Fenerbahçe', aliases: ['fb', 'fenerbahce'] },
+        { name: 'Beşiktaş', aliases: ['bjk', 'besiktas'] },
+      ],
+      note: '"Üç büyükler" Galatasaray, Fenerbahçe ve Beşiktaş\'tır.', d: 1,
+    },
+    {
+      prompt: 'Süper Lig tarihinde şampiyon olmuş takımları yazın.',
+      answers: [
+        { name: 'Galatasaray', aliases: ['gs'] },
+        { name: 'Fenerbahçe', aliases: ['fb', 'fenerbahce'] },
+        { name: 'Beşiktaş', aliases: ['bjk', 'besiktas'] },
+        { name: 'Trabzonspor', aliases: ['ts', 'trabzon'] },
+        { name: 'Bursaspor', aliases: ['bursa'] },
+        { name: 'İstanbul Başakşehir', aliases: ['basaksehir', 'başakşehir', 'medipol basaksehir'] },
+      ],
+      note: 'Bu 6 takım Süper Lig\'de şampiyonluk yaşamış tek takımlardır (2024 itibarıyla).', d: 3,
+    },
+    {
       prompt: 'Marmara Bölgesi\'ndeki illeri yazın.',
       answers: [
         { name: 'İstanbul', aliases: [] }, { name: 'Bursa', aliases: [] }, { name: 'Kocaeli', aliases: ['izmit'] }, { name: 'Sakarya', aliases: ['adapazari', 'adapazarı'] },
@@ -314,6 +371,7 @@ const CATEGORIES = {
   kita:        { name: 'Hangi Kıtada?',      icon: '🗺️', desc: 'Bu ülke hangi kıtada?' },
   bolge:       { name: 'Hangi Bölgede?',     icon: '📍', desc: 'Bu il hangi bölgede?' },
   eski:        { name: 'Hangisi Daha Eski?', icon: '⏳', desc: 'Hangisi daha önce oldu?' },
+  futbol:      { name: 'Futbol',             icon: '⚽', desc: 'Türk futbolu sorusu' },
   duello:      { name: 'Yaz Bakalım',        icon: '⚔️', desc: 'Sırayla yazın, yazamayan kaybeder!' },
 };
 

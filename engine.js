@@ -236,7 +236,7 @@ function openCard() {
 
   if (card.cat === 'bayrak') {
     renderMultipleChoice(q, card.cat, `<div class="q-flag">${q.flag}</div><p class="q-text" style="text-align:center">Bu bayrak hangi ülkenin?</p>`);
-  } else if (card.cat === 'unlu' || card.cat === 'baskent' || card.cat === 'kita' || card.cat === 'bolge') {
+  } else if (card.cat === 'unlu' || card.cat === 'baskent' || card.cat === 'kita' || card.cat === 'bolge' || card.cat === 'futbol') {
     renderMultipleChoice(q, card.cat, `<p class="q-text">${q.question}</p>`);
   } else if (card.cat === 'dogruYanlis') {
     renderTrueFalse(q);
@@ -256,7 +256,7 @@ function renderReadonly(cat, q) {
 
   let body = '';
   if (cat === 'bayrak') body = `<div class="q-flag">${q.flag}</div><p class="q-text" style="text-align:center">Bu bayrak hangi ülkenin?</p>`;
-  else if (cat === 'unlu' || cat === 'baskent' || cat === 'kita' || cat === 'bolge') body = `<p class="q-text">${q.question}</p>`;
+  else if (cat === 'unlu' || cat === 'baskent' || cat === 'kita' || cat === 'bolge' || cat === 'futbol') body = `<p class="q-text">${q.question}</p>`;
   else if (cat === 'dogruYanlis') body = `<p class="q-text">${q.statement}</p>`;
   else if (cat === 'eski') body = `<p class="q-text">⏳ Hangisi daha önce oldu?</p>`;
   $('q-body').innerHTML =
