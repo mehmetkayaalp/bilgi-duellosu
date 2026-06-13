@@ -348,19 +348,25 @@ function startOnlineGame() {
 }
 
 function leaveOnline() {
-  if (online.code) {
-    Net.stop();
-    Net.updateRoom(online.code, { status: 'ended' }).catch(() => {});
-    // Host odayı tamamen kaldırır
-    try {
-      if (online.m && online.m.host === online.pid) {
+  const code = online.code;
+  const wasHost = online.m && online.m.host === online.pid;
+  Net.stop();
+  if (code) {
+    if (wasHost) {
+      // Kurucu ayrılırsa odayı tamamen kaldır (tek işlem — yarış yok).
+      // Rakip null snapshot alır → "oda kapandı".
+      try {
         const { ref, remove } = Net.fns;
-        remove(ref(Net.db, Net.roomPath(online.code)));
-      }
-    } catch { /* önemsiz */ }
+        remove(ref(Net.db, Net.roomPath(code)));
+      } catch { /* önemsiz */ }
+    } else {
+      // Misafir ayrılırsa odayı bitmiş işaretle ki kurucu görsün.
+      Net.updateRoom(code, { status: 'ended' }).catch(() => {});
+    }
   }
   online.code = null;
   online.m = null;
+  online.endedShown = false;
   showScreen('screen-home');
 }
 

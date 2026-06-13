@@ -186,7 +186,11 @@ $('name1').addEventListener('input', () => { $('avatar-preview-1').textContent =
 $('name2').addEventListener('input', () => { $('avatar-preview-2').textContent = $('name2').value.trim() ? initials($('name2').value) : 'B'; });
 
 $('btn-start').addEventListener('click', startLocalGame);
-$('btn-restart').addEventListener('click', () => showScreen('screen-home'));
+$('btn-restart').addEventListener('click', () => {
+  // Online oyundan çıkıyorsak aboneliği kapat ve odayı temizle
+  if (window.GAME && window.GAME.isOnline) leaveOnline();
+  else showScreen('screen-home');
+});
 
 // ---------- Ana menü (mod seçimi) ----------
 $('mode-local').addEventListener('click', () => showScreen('screen-setup'));
