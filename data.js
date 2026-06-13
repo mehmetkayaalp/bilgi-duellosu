@@ -29,16 +29,52 @@ const DATA = {
     { flag: '🇪🇬', answer: 'Mısır', wrong: ['Yemen', 'Suriye', 'Irak'], fact: 'Ortadaki altın kartal "Selahaddin Kartalı"dır. Mısır, piramitleri ve Nil Nehri ile ünlüdür.', d: 2 },
     { flag: '🇸🇪', answer: 'İsveç', wrong: ['Finlandiya', 'Norveç', 'Ukrayna'], fact: 'Sarı İskandinav haçı mavi zemin üzerindedir. Nobel Ödülleri İsveç\'in başkenti Stokholm\'de verilir.', d: 2 },
     { flag: '🇳🇱', answer: 'Hollanda', wrong: ['Lüksemburg', 'Rusya', 'Fransa'], fact: 'Dünyanın en eski üç renkli bayrağıdır (1572). Laleler aslında Hollanda\'ya Osmanlı\'dan götürülmüştür!', d: 2 },
-    { flag: '🇵🇹', answer: 'Portekiz', wrong: ['İspanya', 'İtalya', 'Fas'], fact: 'Yeşil umudu, kırmızı denizcilerin kanını simgeler. Portekizliler büyük keşif yolculuklarının öncüsüydü.', d: 3 },
+    { flag: '🇵🇹', answer: 'Portekiz', wrong: ['İspanya', 'İtalya', 'Fas'], fact: 'Yeşil umudu, kırmızı denizcilerin kanını simgeler. Portekizliler büyük keşif yolculuklarının öncüsüydü.', d: 2 },
     { flag: '🇦🇺', answer: 'Avustralya', wrong: ['Yeni Zelanda', 'Birleşik Krallık', 'Fiji'], fact: 'Sağdaki yıldızlar "Güney Haçı" takımyıldızıdır; sadece Güney Yarımküre\'den görülür.', d: 2 },
     { flag: '🇦🇿', answer: 'Azerbaycan', wrong: ['Türkiye', 'Özbekistan', 'Türkmenistan'], fact: 'Mavi Türklüğü, kırmızı çağdaşlığı, yeşil İslam\'ı temsil eder. Türkiye ile "iki devlet, tek millet" denir.', d: 2 },
     { flag: '🇺🇦', answer: 'Ukrayna', wrong: ['İsveç', 'Kazakistan', 'Romanya'], fact: 'Mavi gökyüzünü, sarı buğday tarlalarını simgeler. Ukrayna "Avrupa\'nın tahıl ambarı" olarak bilinir.', d: 2 },
-    { flag: '🇳🇴', answer: 'Norveç', wrong: ['İzlanda', 'Danimarka', 'Fransa'], fact: 'Fiyortları ve kuzey ışıkları ile ünlüdür. Bayrağındaki haç tüm İskandinav bayraklarında ortaktır.', d: 3 },
-    { flag: '🇨🇭', answer: 'İsviçre', wrong: ['Danimarka', 'Türkiye', 'Kanada'], fact: 'Dünyada kare şeklinde olan iki bayraktan biridir (diğeri Vatikan). Kızılhaç sembolü bu bayraktan esinlenmiştir.', d: 3 },
-    { flag: '🇵🇱', answer: 'Polonya', wrong: ['Monako', 'Endonezya', 'Çekya'], fact: 'Beyaz-kırmızı. Endonezya ve Monako bayrakları tam tersidir (kırmızı üstte)!', d: 3 },
-    { flag: '🇫🇮', answer: 'Finlandiya', wrong: ['İsveç', 'Yunanistan', 'İzlanda'], fact: 'Mavi haç ülkenin binlerce gölünü ve gökyüzünü simgeler. Finlandiya\'da yaklaşık 188.000 göl vardır!', d: 3 },
-    { flag: '🇩🇰', answer: 'Danimarka', wrong: ['Norveç', 'İsviçre', 'Polonya'], fact: '"Dannebrog" dünyanın hâlâ kullanılan en eski ulusal bayrağı kabul edilir (1219).', d: 3 },
-    { flag: '🇮🇪', answer: 'İrlanda', wrong: ['İtalya', 'Fildişi Sahili', 'Macaristan'], fact: 'Yeşil Katolikleri, turuncu Protestanları, beyaz aradaki barışı simgeler. İtalya bayrağıyla karıştırılır ama İrlanda\'nınki turuncudur.', d: 3 },
+    { flag: '🇳🇴', answer: 'Norveç', wrong: ['İzlanda', 'Danimarka', 'Fransa'], fact: 'Fiyortları ve kuzey ışıkları ile ünlüdür. Bayrağındaki haç tüm İskandinav bayraklarında ortaktır.', d: 2 },
+    { flag: '🇨🇭', answer: 'İsviçre', wrong: ['Danimarka', 'Türkiye', 'Kanada'], fact: 'Dünyada kare şeklinde olan iki bayraktan biridir (diğeri Vatikan). Kızılhaç sembolü bu bayraktan esinlenmiştir.', d: 2 },
+    { flag: '🇵🇱', answer: 'Polonya', wrong: ['Monako', 'Endonezya', 'Çekya'], fact: 'Beyaz-kırmızı. Endonezya ve Monako bayrakları tam tersidir (kırmızı üstte)!', d: 2 },
+    { flag: '🇫🇮', answer: 'Finlandiya', wrong: ['İsveç', 'Yunanistan', 'İzlanda'], fact: 'Mavi haç ülkenin binlerce gölünü ve gökyüzünü simgeler. Finlandiya\'da yaklaşık 188.000 göl vardır!', d: 2 },
+    { flag: '🇩🇰', answer: 'Danimarka', wrong: ['Norveç', 'İsviçre', 'Polonya'], fact: '"Dannebrog" dünyanın hâlâ kullanılan en eski ulusal bayrağı kabul edilir (1219).', d: 2 },
+    { flag: '🇮🇪', answer: 'İrlanda', wrong: ['İtalya', 'Fildişi Sahili', 'Macaristan'], fact: 'Yeşil Katolikleri, turuncu Protestanları, beyaz aradaki barışı simgeler. İtalya bayrağıyla karıştırılır ama İrlanda\'nınki turuncudur.', d: 2 },
+
+    // ---- ZOR (d=3): gerçekten obscure bayraklar, seçenekler de aynı bölgeden ----
+    // Mikro devletler
+    { flag: '🇦🇩', answer: 'Andorra', wrong: ['Moldova', 'Romanya', 'Çad'], fact: 'Pireneler\'de Fransa-İspanya arasında küçük bir prenslik. Bayrağı Çad ve Romanya\'ya çok benzer; ortadaki arma onu ayırır.', d: 3 },
+    { flag: '🇸🇲', answer: 'San Marino', wrong: ['Honduras', 'Arjantin', 'El Salvador'], fact: 'İtalya\'nın içinde kalan dünyanın en eski cumhuriyetidir (301).', d: 3 },
+    { flag: '🇱🇮', answer: 'Lihtenştayn', wrong: ['Haiti', 'Karadağ', 'Lüksemburg'], fact: 'İsviçre-Avusturya arasında bir prenslik. Bayrağı 1936 Olimpiyatları\'nda Haiti ile aynı çıkınca taca taç eklendi!', d: 3 },
+    { flag: '🇲🇹', answer: 'Malta', wrong: ['Endonezya', 'Polonya', 'Singapur'], fact: 'Akdeniz\'in ortasında küçük bir ada ülkesi. Soldaki haç İngilizlerin verdiği George Haçı\'dır.', d: 3 },
+    { flag: '🇱🇺', answer: 'Lüksemburg', wrong: ['Hollanda', 'Paraguay', 'Estonya'], fact: 'Hollanda bayrağıyla neredeyse aynıdır; sadece mavi tonu biraz daha açıktır!', d: 3 },
+    { flag: '🇲🇨', answer: 'Monako', wrong: ['Endonezya', 'Polonya', 'Singapur'], fact: 'Endonezya bayrağıyla aynıdır! Sadece en/boy oranı farklıdır. Monaco, Fransa\'ya bağlı küçük bir prensliktir.', d: 3 },
+    { flag: '🇲🇪', answer: 'Karadağ', wrong: ['Sırbistan', 'Arnavutluk', 'Kuzey Makedonya'], fact: 'Kırmızı zemin üzerinde altın çift başlı kartal. 2006\'da bağımsız oldu.', d: 3 },
+
+    // Asya
+    { flag: '🇱🇰', answer: 'Sri Lanka', wrong: ['Bhutan', 'Nepal', 'Myanmar'], fact: 'Ortada kılıçlı bir aslan. Hindistan\'ın güneyindeki bu ada ülkesinin başkenti Kolombo\'dur.', d: 3 },
+    { flag: '🇧🇹', answer: 'Bhutan', wrong: ['Sri Lanka', 'Nepal', 'Tayvan'], fact: 'Bayrağında bir ejderha var! Himalayalar\'da küçük bir krallık; "Gayri Safi Milli Mutluluk" ölçer.', d: 3 },
+    { flag: '🇳🇵', answer: 'Nepal', wrong: ['Bhutan', 'Sri Lanka', 'Bangladeş'], fact: 'Dünyadaki dikdörtgen olmayan tek ulusal bayraktır — iki üçgenden oluşur. Everest Nepal\'dedir.', d: 3 },
+    { flag: '🇲🇳', answer: 'Moğolistan', wrong: ['Tayvan', 'Tibet', 'Türkmenistan'], fact: 'Soldaki sembol "Soyombo"dur; ay, güneş ve ateşi simgeler. Cengiz Han\'ın ülkesidir.', d: 3 },
+    { flag: '🇰🇿', answer: 'Kazakistan', wrong: ['Kırgızistan', 'Tacikistan', 'Özbekistan'], fact: 'Mavi zeminde güneş ve kartal. Yüzölçümüyle dünyanın 9. büyük ülkesi, denize kıyısı olmayan en büyük ülkedir.', d: 3 },
+    { flag: '🇲🇲', answer: 'Myanmar', wrong: ['Litvanya', 'Bolivya', 'Etiyopya'], fact: 'Sarı-yeşil-kırmızı şeritler ortada beyaz yıldız. Eski adı Burma\'dır.', d: 3 },
+    { flag: '🇰🇭', answer: 'Kamboçya', wrong: ['Tayland', 'Laos', 'Vietnam'], fact: 'Bayrağında bir tapınak (Angkor Wat) olan tek ülkedir.', d: 3 },
+
+    // Afrika
+    { flag: '🇪🇹', answer: 'Etiyopya', wrong: ['Gana', 'Bolivya', 'Senegal'], fact: 'Yeşil-sarı-kırmızı pan-Afrika renklerinin kaynağıdır. Sömürge olmamış nadir Afrika ülkelerindendir.', d: 3 },
+    { flag: '🇸🇳', answer: 'Senegal', wrong: ['Mali', 'Kamerun', 'Gine'], fact: 'Yeşil-sarı-kırmızı şeritler ortada yeşil yıldız. Mali bayrağıyla karıştırılır (Mali\'de yıldız yoktur).', d: 3 },
+    { flag: '🇰🇪', answer: 'Kenya', wrong: ['Malavi', 'Güney Sudan', 'Uganda'], fact: 'Ortada bir Maasai kalkanı ve mızraklar var. Safari turlarının başkenti.', d: 3 },
+    { flag: '🇬🇭', answer: 'Gana', wrong: ['Bolivya', 'Etiyopya', 'Kamerun'], fact: 'Kırmızı-sarı-yeşil ortada siyah yıldız. Afrika\'nın "Kara Yıldızı" olarak bilinir.', d: 3 },
+    { flag: '🇹🇳', answer: 'Tunus', wrong: ['Türkiye', 'Cezayir', 'Fas'], fact: 'Türk bayrağıyla karıştırılır ama Tunus\'unkinde ay-yıldız beyaz bir daire içindedir.', d: 3 },
+    { flag: '🇿🇦', answer: 'Güney Afrika', wrong: ['Namibya', 'Kongo', 'Zimbabwe'], fact: '6 renkli, dünyanın en renkli ulusal bayrağıdır. Apartheid sonrası 1994\'te kabul edildi.', d: 3 },
+
+    // Orta Doğu / az bilinen
+    { flag: '🇱🇧', answer: 'Lübnan', wrong: ['Suriye', 'Ürdün', 'Irak'], fact: 'Ortadaki yeşil sedir ağacı ülkenin ulusal sembolüdür; binlerce yıllık ağaçlar Lübnan dağlarında hâlâ ayakta.', d: 3 },
+    { flag: '🇶🇦', answer: 'Katar', wrong: ['Bahreyn', 'Umman', 'Yemen'], fact: 'Bahreyn bayrağıyla karıştırılır; Katar\'ınki bordo (kestane) renkte ve dokuz zikzak vardır.', d: 3 },
+
+    // Avrupa (az bilinen)
+    { flag: '🇲🇩', answer: 'Moldova', wrong: ['Romanya', 'Çad', 'Andorra'], fact: 'Romanya bayrağıyla aynıdır; tek fark ortadaki devlet armasıdır.', d: 3 },
+    { flag: '🇱🇻', answer: 'Letonya', wrong: ['Avusturya', 'Endonezya', 'Litvanya'], fact: 'Koyu kırmızı-beyaz-koyu kırmızı. Avusturya bayrağıyla karıştırılır ama Letonya\'nınki daha koyu ve beyaz şerit daha incedir.', d: 3 },
+    { flag: '🇸🇰', answer: 'Slovakya', wrong: ['Slovenya', 'Hırvatistan', 'Rusya'], fact: 'Slav üç rengi (beyaz-mavi-kırmızı) + arma. Slovenya, Hırvatistan ve Sırbistan bayrakları çok benzer; armalar onları ayırır.', d: 3 },
   ],
 
   // ---------- KATEGORİ 2: ÜNLÜ KİŞİLER ----------
@@ -95,6 +131,13 @@ const DATA = {
     { statement: 'Nil Nehri dünyanın en uzun nehirlerinden biridir.', answer: true, fact: 'Yaklaşık 6.650 km ile Amazon\'la "en uzun nehir" unvanı için yarışır ve 11 ülkeden geçer.', d: 2 },
     { statement: 'Çin Seddi uzaydan çıplak gözle rahatça görülür.', answer: false, fact: 'Bu yaygın bir şehir efsanesidir; astronotlar çıplak gözle seçilemediğini doğrulamıştır.', d: 3 },
     { statement: 'Mısır\'da yalnızca bir piramit vardır.', answer: false, fact: 'Mısır\'da 100\'den fazla piramit bulunur.', d: 3 },
+    // Daha çok Zor seviye ifade
+    { statement: 'Kanada\'nın iki resmi dili İngilizce ve Fransızca\'dır.', answer: true, fact: 'Quebec eyaletinin ana dili Fransızca\'dır.', d: 3 },
+    { statement: 'Avustralya, Birleşik Krallık\'tan daha büyüktür.', answer: true, fact: 'Avustralya yaklaşık 31 kat daha büyüktür.', d: 3 },
+    { statement: 'Antarktika\'da hiç yerli halk yaşamaz.', answer: true, fact: 'Sadece geçici olarak bilim insanları yaşar.', d: 3 },
+    { statement: 'İsviçre\'nin başkenti Zürih\'tir.', answer: false, fact: 'İsviçre\'nin başkenti Bern\'dir; Zürih en büyük şehridir.', d: 3 },
+    { statement: 'Bir yılda 366 gün olan yıla "artık yıl" denir.', answer: true, fact: '4 yılda bir gerçekleşir; Şubat 29 gün çeker.', d: 2 },
+    { statement: 'Türkiye\'nin en büyük gölü Tuz Gölü\'dür.', answer: false, fact: 'Türkiye\'nin en büyük gölü Van Gölü\'dür. Tuz Gölü ikinci sıradadır.', d: 3 },
   ],
 
   // ---------- KATEGORİ: BAŞKENTLER ----------
@@ -132,9 +175,15 @@ const DATA = {
     { question: 'Nijerya hangi kıtadadır?', answer: 'Afrika', wrong: ['Güney Amerika', 'Asya', 'Okyanusya'], fact: 'Nijerya, Afrika\'nın en kalabalık ülkesidir.', d: 2 },
     { question: 'Vietnam hangi kıtadadır?', answer: 'Asya', wrong: ['Afrika', 'Okyanusya', 'Güney Amerika'], fact: 'Vietnam, dünyanın en büyük kahve üreticilerinden biridir.', d: 2 },
     { question: 'Norveç hangi kıtadadır?', answer: 'Avrupa', wrong: ['Kuzey Amerika', 'Asya', 'Okyanusya'], fact: 'Norveç\'in kuzeyinde yazın güneş hiç batmaz.', d: 2 },
-    { question: 'Peru hangi kıtadadır?', answer: 'Güney Amerika', wrong: ['Afrika', 'Asya', 'Kuzey Amerika'], fact: 'İnka şehri Machu Picchu, Peru\'nun And Dağları\'ndadır.', d: 3 },
-    { question: 'Fas hangi kıtadadır?', answer: 'Afrika', wrong: ['Avrupa', 'Asya', 'Güney Amerika'], fact: 'Fas ile İspanya arası sadece 14 km\'dir.', d: 3 },
-    { question: 'Yeni Zelanda hangi kıtadadır?', answer: 'Okyanusya', wrong: ['Asya', 'Avrupa', 'Güney Amerika'], fact: 'Yeni Zelanda, Avustralya\'nın parçası değildir; sembolü kivi kuşudur.', d: 3 },
+    { question: 'Peru hangi kıtadadır?', answer: 'Güney Amerika', wrong: ['Afrika', 'Asya', 'Kuzey Amerika'], fact: 'İnka şehri Machu Picchu, Peru\'nun And Dağları\'ndadır.', d: 2 },
+    { question: 'Fas hangi kıtadadır?', answer: 'Afrika', wrong: ['Avrupa', 'Asya', 'Güney Amerika'], fact: 'Fas ile İspanya arası sadece 14 km\'dir.', d: 2 },
+    { question: 'Yeni Zelanda hangi kıtadadır?', answer: 'Okyanusya', wrong: ['Asya', 'Avrupa', 'Güney Amerika'], fact: 'Yeni Zelanda, Avustralya\'nın parçası değildir; sembolü kivi kuşudur.', d: 2 },
+    // Zor: hangi kıtada olduğu tartışmalı/şaşırtıcı ülkeler
+    { question: 'Kıbrıs jeopolitik olarak hangi kıtaya dahil edilir?', answer: 'Avrupa', wrong: ['Asya', 'Afrika', 'Orta Doğu (kıta değil)'], fact: 'Coğrafi olarak Asya\'ya yakındır ama AB üyesi olduğu için siyasi olarak Avrupa\'ya dahildir.', d: 3 },
+    { question: 'Surinam hangi kıtadadır?', answer: 'Güney Amerika', wrong: ['Afrika', 'Asya', 'Karayipler'], fact: 'Resmi dili Felemenkçe (Hollandaca) olan tek Güney Amerika ülkesidir.', d: 3 },
+    { question: 'Madagaskar hangi kıtadadır?', answer: 'Afrika', wrong: ['Asya', 'Okyanusya', 'Antarktika'], fact: 'Dünyanın 4. büyük adasıdır; Afrika kıtasının doğusundadır. Lemurlarıyla ünlüdür.', d: 3 },
+    { question: 'Papua Yeni Gine hangi kıtadadır?', answer: 'Okyanusya', wrong: ['Asya', 'Afrika', 'Güney Amerika'], fact: 'Dünyanın dil çeşitliliği en yüksek ülkesidir — 800\'den fazla dil konuşulur.', d: 3 },
+    { question: 'Ermenistan hangi kıtadadır?', answer: 'Asya', wrong: ['Avrupa', 'Afrika', 'Orta Doğu (kıta değil)'], fact: 'Kafkasya\'daki Ermenistan, coğrafi olarak Asya\'da kabul edilir.', d: 3 },
   ],
 
   // ---------- KATEGORİ: HANGİ BÖLGEDE? (Türkiye'nin 7 bölgesi) ----------
@@ -152,6 +201,15 @@ const DATA = {
     { question: 'Diyarbakır hangi bölgemizdedir?', answer: 'Güneydoğu Anadolu', wrong: ['Doğu Anadolu', 'İç Anadolu', 'Akdeniz'], fact: 'Diyarbakır surları, Çin Seddi\'nden sonra en uzun sur yapılarından biridir.', d: 2 },
     { question: 'Van hangi bölgemizdedir?', answer: 'Doğu Anadolu', wrong: ['Güneydoğu Anadolu', 'Karadeniz', 'İç Anadolu'], fact: 'Türkiye\'nin en büyük gölü Van Gölü buradadır.', d: 2 },
     { question: 'Muğla hangi bölgemizdedir?', answer: 'Ege', wrong: ['Akdeniz', 'Marmara', 'İç Anadolu'], fact: 'Bodrum ve Marmaris gibi tatil beldeleri Muğla\'dadır.', d: 2 },
+    // Zor: il-bölge eşleşmesi şaşırtıcı olan iller
+    { question: 'Bartın hangi bölgemizdedir?', answer: 'Karadeniz', wrong: ['Marmara', 'İç Anadolu', 'Doğu Anadolu'], fact: 'Türkiye\'nin en küçük illerinden biridir.', d: 3 },
+    { question: 'Yozgat hangi bölgemizdedir?', answer: 'İç Anadolu', wrong: ['Karadeniz', 'Doğu Anadolu', 'Güneydoğu Anadolu'], fact: 'Çamlık Milli Parkı ile ünlüdür.', d: 3 },
+    { question: 'Burdur hangi bölgemizdedir?', answer: 'Akdeniz', wrong: ['Ege', 'İç Anadolu', 'Güneydoğu Anadolu'], fact: 'Salda Gölü ve Sagalassos antik kenti Burdur\'dadır.', d: 3 },
+    { question: 'Sinop hangi bölgemizdedir?', answer: 'Karadeniz', wrong: ['Marmara', 'Doğu Anadolu', 'İç Anadolu'], fact: 'Türkiye\'nin en kuzey noktası Sinop\'tadır (İnceburun).', d: 3 },
+    { question: 'Karaman hangi bölgemizdedir?', answer: 'İç Anadolu', wrong: ['Akdeniz', 'Doğu Anadolu', 'Ege'], fact: 'Türkçenin resmi dil ilan edildiği yer Karaman\'dır (1277, Karamanoğlu Mehmet Bey).', d: 3 },
+    { question: 'Hakkari hangi bölgemizdedir?', answer: 'Doğu Anadolu', wrong: ['Güneydoğu Anadolu', 'İç Anadolu', 'Karadeniz'], fact: 'Türkiye\'nin en yüksek rakımlı illerindendir.', d: 3 },
+    { question: 'Kilis hangi bölgemizdedir?', answer: 'Güneydoğu Anadolu', wrong: ['Akdeniz', 'Doğu Anadolu', 'İç Anadolu'], fact: '1995\'te il olmuş, Türkiye\'nin yeni illerinden biridir.', d: 3 },
+    { question: 'Tunceli hangi bölgemizdedir?', answer: 'Doğu Anadolu', wrong: ['Güneydoğu Anadolu', 'Karadeniz', 'İç Anadolu'], fact: 'Eski adı Dersim\'dir; Munzur Dağları ile ünlüdür.', d: 3 },
   ],
 
   // ---------- KATEGORİ: HANGİSİ DAHA ESKİ? ----------
