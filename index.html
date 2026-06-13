@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#150b33">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Bilgi Düellosu 🃏</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- ======== ANA MENÜ (mod seçimi) ======== -->
+  <section id="screen-home" class="screen active">
+    <div class="setup-box">
+      <div class="logo-cards">
+        <span class="mini-card c1">🚩</span>
+        <span class="mini-card c2">🎭</span>
+        <span class="mini-card c3">⏳</span>
+        <span class="mini-card c4">⚔️</span>
+      </div>
+      <h1 class="logo">Bilgi Düellosu</h1>
+      <p class="tagline">İki oyuncu, bir deste kart, bol bilgi!</p>
+
+      <div class="mode-grid">
+        <button id="mode-local" class="mode-card">
+          <span class="mode-icon">📱</span>
+          <span class="mode-title">Aynı Cihazda</span>
+          <span class="mode-desc">Tek telefonda sırayla oynayın</span>
+        </button>
+        <button id="mode-online" class="mode-card">
+          <span class="mode-icon">🌐</span>
+          <span class="mode-title">Online</span>
+          <span class="mode-desc">Ayrı cihazlardan, internet üzerinden</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== KURULUM (aynı cihazda) ======== -->
+  <section id="screen-setup" class="screen">
+    <div class="setup-box">
+      <button class="btn-back-home back-link">← Ana menü</button>
+      <h1 class="logo small">Aynı Cihazda</h1>
+      <div class="player-inputs">
+        <div class="player-input p1">
+          <div class="avatar a1" id="avatar-preview-1">A</div>
+          <input type="text" id="name1" placeholder="1. Oyuncu" maxlength="14">
+        </div>
+        <div class="vs">VS</div>
+        <div class="player-input p2">
+          <div class="avatar a2" id="avatar-preview-2">B</div>
+          <input type="text" id="name2" placeholder="2. Oyuncu" maxlength="14">
+        </div>
+      </div>
+
+      <div class="round-select">
+        <span class="round-label">Kaç kartla oynayalım?</span>
+        <div class="round-options">
+          <button class="round-btn" data-rounds="6">6<small>hızlı</small></button>
+          <button class="round-btn selected" data-rounds="10">10<small>normal</small></button>
+          <button class="round-btn" data-rounds="14">14<small>uzun</small></button>
+        </div>
+      </div>
+
+      <button id="btn-start" class="big-btn">▶ &nbsp;Oyunu Başlat</button>
+      <p class="setup-hint">🃏 Herkesin 1 adet 50:50 ve 1 adet Pas jokeri var · ⭐ Destede gizli çift puan kartları saklı!</p>
+    </div>
+  </section>
+
+  <!-- ======== ONLINE LOBİ ======== -->
+  <section id="screen-online" class="screen">
+    <div class="setup-box">
+      <button class="btn-back-home back-link">← Ana menü</button>
+      <h1 class="logo small">Online Oyun</h1>
+
+      <div id="online-join-box">
+        <div class="player-input solo">
+          <div class="avatar a1" id="avatar-preview-online">A</div>
+          <input type="text" id="online-name" placeholder="İsmin" maxlength="14">
+        </div>
+
+        <div class="round-select">
+          <span class="round-label">Kaç kart? (kurucu seçer)</span>
+          <div class="round-options">
+            <button class="round-btn" data-rounds="6">6</button>
+            <button class="round-btn selected" data-rounds="10">10</button>
+            <button class="round-btn" data-rounds="14">14</button>
+          </div>
+        </div>
+
+        <button id="btn-create" class="big-btn">🏠 &nbsp;Oda Kur</button>
+
+        <div class="or-divider"><span>ya da</span></div>
+
+        <div class="join-row">
+          <input type="text" id="join-code" placeholder="Oda kodu (6 hane)" maxlength="6" inputmode="numeric">
+          <button id="btn-join" class="small-btn">Katıl</button>
+        </div>
+        <p id="lobby-msg" class="lobby-msg"></p>
+      </div>
+
+      <div id="online-room" class="hidden">
+        <p class="room-code-label">Oda Kodu</p>
+        <div class="room-code" id="room-code">------</div>
+        <div class="room-players" id="room-players"></div>
+        <p class="room-wait" id="room-wait"></p>
+        <button id="btn-online-start" class="big-btn hidden">▶ Oyunu Başlat</button>
+        <button id="btn-online-leave" class="pass-btn" style="margin-top:14px">Odadan Ayrıl</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== OYUN EKRANI ======== -->
+  <section id="screen-game" class="screen">
+    <header id="scoreboard">
+      <div class="player-score p1" id="score-box-1">
+        <div class="avatar a1" id="avatar1">A</div>
+        <div class="score-info">
+          <span class="pname" id="pname1">Oyuncu 1</span>
+          <span class="pscore" id="pscore1">0</span>
+          <span class="jokers" id="jokers1"></span>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label" id="progress">Kart 1 / 10</div>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <div class="player-score p2" id="score-box-2">
+        <div class="score-info right">
+          <span class="pname" id="pname2">Oyuncu 2</span>
+          <span class="pscore" id="pscore2">0</span>
+          <span class="jokers" id="jokers2"></span>
+        </div>
+        <div class="avatar a2" id="avatar2">B</div>
+      </div>
+    </header>
+
+    <div id="board-msg" class="board-msg"></div>
+    <div id="board"></div>
+
+    <!-- Soru kartı (modal) -->
+    <div id="overlay" class="overlay hidden">
+      <div class="q-card">
+        <div class="q-top">
+          <span class="q-category" id="q-category"></span>
+          <span class="q-player" id="q-player"></span>
+        </div>
+        <div id="bonus-banner" class="bonus-banner hidden">⭐ ÇİFT PUAN KARTI! Bu elde tüm puanlar 2 katı!</div>
+        <div class="timer-row" id="timer-row">
+          <div class="timer"><div class="timer-fill" id="timer-fill"></div></div>
+          <span class="timer-sec" id="timer-sec">20</span>
+        </div>
+        <div id="q-spectate" class="q-spectate hidden"></div>
+        <div id="q-body"></div>
+        <div id="q-options"></div>
+        <div id="joker-row"></div>
+
+        <!-- Düello arayüzü -->
+        <div id="duel-box" class="hidden">
+          <div class="duel-turn" id="duel-turn"></div>
+          <div class="duel-found" id="duel-found"></div>
+          <div class="duel-input-row">
+            <input type="text" id="duel-input" placeholder="Cevabını yaz ve Enter'a bas..." autocomplete="off">
+            <button id="duel-submit" class="small-btn">Gönder</button>
+          </div>
+          <div class="duel-btn-row">
+            <button id="duel-joker-pass" class="joker-btn">🃏 Joker Pas <small>(sıra geçer, kaybetmezsin)</small></button>
+            <button id="duel-pass" class="pass-btn">🏳️ Pes ediyorum</button>
+          </div>
+        </div>
+
+        <!-- Cevap sonrası bilgi paneli -->
+        <div id="fact-panel" class="hidden">
+          <div id="fact-result"></div>
+          <div class="fact-text"><span class="fact-label">💡 Biliyor muydun?</span><span id="fact-text"></span></div>
+          <button id="btn-next" class="big-btn">Devam →</button>
+          <p id="next-wait" class="next-wait hidden">Rakibin devam etmesi bekleniyor… ⏳</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== BİTİŞ EKRANI ======== -->
+  <section id="screen-end" class="screen">
+    <div class="setup-box">
+      <div id="end-emoji" class="end-emoji">🏆</div>
+      <h1 id="end-title">Kazanan!</h1>
+      <div class="final-scores" id="final-scores"></div>
+      <button id="btn-restart" class="big-btn">↺ &nbsp;Ana Menü</button>
+    </div>
+  </section>
+
+  <div id="confetti-layer"></div>
+
+  <script src="data.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="engine.js"></script>
+  <script src="net.js"></script>
+  <script src="online.js"></script>
+  <script src="game.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
+</body>
+</html>
