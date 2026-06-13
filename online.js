@@ -10,7 +10,8 @@ const online = {
   code: null,
   pid: null,
   totalCards: 10,
-  difficulty: 1,
+  difficulty: 1,        // Arkadaşınla Oyna (oda kodu) modunda tek zorluk
+  difficulties: [1],    // Hızlı Eşleşme modunda kabul edilen zorluklar (çoklu)
   m: null,        // son normalize edilmiş oda durumu (ayna)
   busy: false,
   lastQKey: '',
@@ -476,12 +477,20 @@ function renderMatchWaiting() {
 }
 
 // Bir bekleme odasını atomik olarak kap (transaction)
-async function tryClaim(code, name) {
+// myDiffs verilirse kesişimi kontrol et ve oyunun zorluğunu kesişimden seç.
+async function tryClaim(code, name, myDiffs) {
   try {
     const res = await Net.claim(code, (room) => {
       if (!room) return;                       // oda yok
       if (room.status !== 'waiting') return;   // başlamış
       if (room.ids && room.ids.p1) return;     // dolu
+      if (myDiffs && myDiffs.length) {
+        // Hızlı Eşleşme: ev sahibi de bir küme tutuyor; kesişim boşsa eşleşme
+        const hostDiffs = room.difficulties || [typeof room.difficulty === 'number' ? room.difficulty : 1];
+        const inter = myDiffs.filter((d) => hostDiffs.includes(d));
+        if (inter.length === 0) return;
+        room.difficulty = inter[Math.floor(Math.random() * inter.length)];
+      }
       room.ids = room.ids || {};
       room.names = room.names || {};
       room.ids.p1 = online.pid;
@@ -513,25 +522,40 @@ async function startClaimedGame(code) {
   buildOnlineGAME();
 }
 
+function queueDiffs(entry) {
+  // Geriye dönük uyum: eski entry'lerde diff (tek sayı) vardı
+  if (entry.diffs && entry.diffs.length) return entry.diffs;
+  if (typeof entry.diff === 'number') return [entry.diff];
+  return [];
+}
+
+function diffsLabel(arr) {
+  return arr.map((d) => `${DIFFICULTIES[d].icon} ${DIFFICULTIES[d].name}`).join(', ');
+}
+
 async function quickMatch() {
   const name = $('match-name').value.trim();
   if (!name) { matchMsg('Önce ismini yaz.'); return; }
+  if (!online.difficulties.length) online.difficulties = [1];
   if (!Net.isConfigured()) { matchMsg('⚠️ Firebase anahtarları girilmemiş — README\'deki kurulumu yap.'); return; }
 
   online.pid = getPid();
   online.matchmaking = true;
   online.endedShown = false;
-  showMatchSearching('Rakip aranıyor…');
+  showMatchSearching('Rakip aranıyor…', `Tercihin: ${diffsLabel(online.difficulties)}`);
 
   try {
     await Net.init();
-    // 1) Kuyruğu oku, bekleyen birini kapmayı dene (önce aynı zorluk)
+    // 1) Kuyruğu oku, kabul ettiğin zorluklarla KESİŞEN birini kapmayı dene
     const queue = (await Net.getPath('matchmaking')) || {};
-    const myDiff = online.difficulty;
-    const codes = Object.keys(queue).filter((c) => queue[c] && queue[c].host && queue[c].host !== online.pid);
-    const ordered = [...shuffle(codes.filter((c) => queue[c].diff === myDiff)), ...shuffle(codes.filter((c) => queue[c].diff !== myDiff))];
-    for (const code of ordered) {
-      if (await tryClaim(code, name)) { await startClaimedGame(code); return; }
+    const myDiffs = [...online.difficulties];
+    const candidates = Object.keys(queue).filter((c) => {
+      const e = queue[c];
+      if (!e || !e.host || e.host === online.pid) return false;
+      return queueDiffs(e).some((d) => myDiffs.includes(d));
+    });
+    for (const code of shuffle(candidates)) {
+      if (await tryClaim(code, name, myDiffs)) { await startClaimedGame(code); return; }
       // kapılamadıysa (oda gitmiş olabilir) kuyruktan temizle
       await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
     }
@@ -544,13 +568,17 @@ async function createWaitingMatchRoom(name) {
   let code = genCode();
   for (let t = 0; t < 5 && (await Net.getRoom(code)); t++) code = genCode();
   online.code = code;
+  const diffs = [...online.difficulties];
   await Net.createRoom(code, {
     host: online.pid, status: 'waiting',
-    difficulty: online.difficulty, totalCards: 10,
+    // Geçici zorluk: kapan kişi bunu kesişimden seçtiğinde günceller
+    difficulty: diffs[0],
+    difficulties: diffs,
+    totalCards: 10,
     names: { p0: name }, ids: { p0: online.pid },
     turn: 0, played: 0, current: -1, phase: 'pick',
   });
-  await Net.setPath(`matchmaking/${code}`, { host: online.pid, diff: online.difficulty, ts: Date.now() });
+  await Net.setPath(`matchmaking/${code}`, { host: online.pid, diffs, ts: Date.now() });
   // Bağlantı koparsa hem odayı hem kuyruk kaydını temizle
   try {
     const { ref, onDisconnect } = Net.fns;
@@ -569,14 +597,20 @@ function watchQueueWhileWaiting(name) {
   online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
     if (!online.matchmaking || !online.code || online.claiming) return;
     queue = queue || {};
-    const cands = Object.keys(queue).filter(
-      (c) => c !== online.code && queue[c] && queue[c].host && queue[c].host < online.pid
-    );
+    const myDiffs = [...online.difficulties];
+    // Pid-tiebreak (yarış önlemi) + zorluk kesişimi
+    const cands = Object.keys(queue).filter((c) => {
+      if (c === online.code) return false;
+      const e = queue[c];
+      if (!e || !e.host) return false;
+      if (e.host >= online.pid) return false;
+      return queueDiffs(e).some((d) => myDiffs.includes(d));
+    });
     if (cands.length === 0) return;
     online.claiming = true;
     (async () => {
       for (const code of cands) {
-        if (await tryClaim(code, name)) {
+        if (await tryClaim(code, name, myDiffs)) {
           await teardownMyWaitingRoom();
           await startClaimedGame(code);
           return;
@@ -614,10 +648,16 @@ function syncDiffFrom(screenId) {
   if (sel) online.difficulty = parseInt(sel.dataset.diff, 10);
 }
 
+function syncMatchDiffs() {
+  const arr = [...document.querySelectorAll('#match-diffs .diff-btn.selected')]
+    .map((b) => parseInt(b.dataset.diff, 10));
+  online.difficulties = arr.length ? arr : [1];
+}
+
 function enterMatch() {
   if (online.code) leaveOnline();
   resetOnlineState();
-  syncDiffFrom('screen-match');
+  syncMatchDiffs();
   showMatchSetup();
   $('match-msg').textContent = '';
   showScreen('screen-match');
@@ -654,11 +694,13 @@ $('match-name').addEventListener('input', () => {
   $('avatar-preview-match').textContent = $('match-name').value.trim() ? initials($('match-name').value) : 'A';
 });
 
-document.querySelectorAll('#screen-match .diff-btn').forEach((btn) => {
+document.querySelectorAll('#match-diffs .diff-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('#screen-match .diff-btn').forEach((b) => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    online.difficulty = parseInt(btn.dataset.diff, 10);
+    btn.classList.toggle('selected');
+    // En az bir zorluk seçili kalsın
+    const stillSelected = document.querySelectorAll('#match-diffs .diff-btn.selected');
+    if (stillSelected.length === 0) btn.classList.add('selected');
+    syncMatchDiffs();
   });
 });
 

@@ -303,6 +303,23 @@ body {
 .diff-btn:hover { transform: translateY(-3px); }
 .diff-btn.selected { border-color: var(--gold); background: rgba(255, 209, 102, 0.16); box-shadow: 0 8px 20px rgba(255, 209, 102, 0.2); }
 
+/* Çoklu seçim — sağ üst rozet ✓ */
+.diff-options.multi .diff-btn { position: relative; }
+.diff-options.multi .diff-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  background: var(--gold);
+  color: var(--ink);
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.round-label small { display: block; opacity: 0.55; font-size: 0.74rem; font-weight: 600; margin-top: 2px; }
+
 .big-btn {
   display: inline-block;
   padding: 15px 46px;
