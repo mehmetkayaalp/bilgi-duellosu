@@ -8,8 +8,9 @@
 const $ = (id) => document.getElementById(id);
 
 const POINTS = { normal: 10, fast: 5, duelWin: 20, duelDraw: 15 };
-const TIME_LIMIT = 20;   // saniye
-const FAST_LIMIT = 10;   // bu süreden hızlı cevaplayana bonus
+const TIME_LIMIT = 20;        // şıklı sorular için saniye
+const DUEL_TIME_LIMIT = 30;   // "Yaz Bakalım" için daha uzun süre
+const FAST_LIMIT = 10;        // bu süreden hızlı cevaplayana bonus
 
 // ---------- Saf yardımcılar ----------
 function shuffle(arr) {
@@ -85,15 +86,15 @@ function showScreen(id) {
 // ---------- Süre sayacı ----------
 const timer = { id: null, started: 0 };
 
-function startTimer(onTimeout) {
+function startTimer(onTimeout, seconds = TIME_LIMIT) {
   stopTimer();
   timer.started = Date.now();
   $('timer-row').classList.remove('hidden');
-  renderTimer(TIME_LIMIT, TIME_LIMIT);
+  renderTimer(seconds, seconds);
   timer.id = setInterval(() => {
     const elapsed = (Date.now() - timer.started) / 1000;
-    const remain = Math.max(0, TIME_LIMIT - elapsed);
-    renderTimer(remain, TIME_LIMIT);
+    const remain = Math.max(0, seconds - elapsed);
+    renderTimer(remain, seconds);
     if (remain <= 0) {
       stopTimer();
       onTimeout();
@@ -213,9 +214,10 @@ function openCard() {
   playerEl.textContent = `Cevaplayan: ${G.players[G.turn]}`;
   playerEl.className = `q-player p${G.turn + 1}`;
 
-  // Online'da soruyu sadece sırası gelen oyuncu cevaplar; rakip bekler.
+  // Online'da soruyu sadece sırası gelen oyuncu cevaplar; rakip soruyu ve
+  // şıkları görür, cevap verince sonucu da görür (readonly).
   if (G.isOnline && G.turn !== G.myIndex) {
-    renderSpectator(card.cat);
+    renderReadonly(card.cat, q);
     return;
   }
 
@@ -230,20 +232,45 @@ function openCard() {
   }
 }
 
-// Online'da rakip cevaplarken gösterilen bekleme görünümü
-function renderSpectator(cat) {
+// Online'da rakip cevaplarken: soruyu + şıkları (devre dışı) göster
+function renderReadonly(cat, q) {
   const G = window.GAME;
   $('timer-row').classList.add('hidden');
-  $('q-body').innerHTML = '';
-  $('q-spectate').classList.remove('hidden');
-  $('q-spectate').innerHTML =
-    `<div class="spectate-icon">${CATEGORIES[cat].icon}</div>
-     <p><span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> "${CATEGORIES[cat].name}" sorusunu yanıtlıyor…</p>
-     <div class="spectate-dots"><span></span><span></span><span></span></div>`;
+
+  let body = '';
+  if (cat === 'bayrak') body = `<div class="q-flag">${q.flag}</div><p class="q-text" style="text-align:center">Bu bayrak hangi ülkenin?</p>`;
+  else if (cat === 'unlu' || cat === 'baskent' || cat === 'kita') body = `<p class="q-text">${q.question}</p>`;
+  else if (cat === 'dogruYanlis') body = `<p class="q-text">${q.statement}</p>`;
+  else if (cat === 'eski') body = `<p class="q-text">⏳ Hangisi daha önce oldu?</p>`;
+  $('q-body').innerHTML =
+    `<p class="spectate-note">✍️ <span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> yanıtlıyor…</p>${body}`;
+
+  const box = $('q-options');
+  box.className = '';
+  let opts;
+  if (cat === 'dogruYanlis') { opts = ['✅ Doğru', '❌ Yanlış']; }
+  else if (cat === 'eski') { box.className = 'stacked'; opts = [q.a.text, q.b.text]; }
+  else { opts = shuffle([q.answer, ...q.wrong]); }
+
+  opts.forEach((t) => {
+    const b = document.createElement('button');
+    b.className = 'opt-btn' + (cat === 'dogruYanlis' ? ' tf' : '') + (cat === 'eski' ? ' event' : '');
+    b.textContent = t;
+    b.disabled = true;
+    box.appendChild(b);
+  });
+}
+
+// Rakibin cevabını görmek için: readonly şıkları sonuçla boya
+function revealReadonly(answer, chosen) {
+  $('q-options').querySelectorAll('.opt-btn').forEach((b) => {
+    if (b.textContent === answer) b.classList.add('correct');
+    else if (chosen && b.textContent === chosen) b.classList.add('wrong');
+  });
 }
 
 // ---------- Puanlama (motor hesaplar, controller işler) ----------
-function settleSolo(correct, cat, q, resultText) {
+function settleSolo(correct, cat, q, resultText, answer, chosen) {
   stopTimer();
   const G = window.GAME;
   const m = G.bonusMult();
@@ -254,7 +281,7 @@ function settleSolo(correct, cat, q, resultText) {
     msg = `Doğru! +${points} puan${fast ? ' (⚡ hız bonusu dahil)' : ''} 🎉`;
   }
   G.commitSolo({
-    correct, cat, points,
+    correct, cat, points, answer, chosen,
     badge: correct ? { cls: `p${G.turn + 1}`, icon: '✓' } : { cls: 'no', icon: '✗' },
     factText: q.fact,
     resultText: msg,
@@ -284,7 +311,7 @@ function renderMultipleChoice(q, cat, bodyHtml) {
       const correct = opt === q.answer;
       lockOptions((b) => b.textContent === q.answer, btn);
       $('joker-row').innerHTML = '';
-      settleSolo(correct, cat, q, `Yanlış! Doğru cevap: ${q.answer}`);
+      settleSolo(correct, cat, q, `Yanlış! ('${opt}' seçildi) Doğru cevap: ${q.answer}`, q.answer, opt);
     });
     box.appendChild(btn);
   });
@@ -306,7 +333,7 @@ function renderMultipleChoice(q, cat, bodyHtml) {
   startTimer(() => {
     lockOptions((b) => b.textContent === q.answer, null);
     $('joker-row').innerHTML = '';
-    settleSolo(false, cat, q, `⏰ Süre doldu! Doğru cevap: ${q.answer}`);
+    settleSolo(false, cat, q, `⏰ Süre doldu! Doğru cevap: ${q.answer}`, q.answer, null);
   });
 }
 
@@ -323,14 +350,14 @@ function renderTrueFalse(q) {
     btn.addEventListener('click', () => {
       const correct = val === q.answer;
       lockOptions((b) => b.textContent.includes(correctLabel), btn);
-      settleSolo(correct, 'dogruYanlis', q, `Yanlış! Bu bilgi ${correctLabel.toUpperCase()} idi.`);
+      settleSolo(correct, 'dogruYanlis', q, `Yanlış! Bu bilgi ${correctLabel.toUpperCase()} idi.`, q.answer ? '✅ Doğru' : '❌ Yanlış', label);
     });
     box.appendChild(btn);
   });
 
   startTimer(() => {
     lockOptions((b) => b.textContent.includes(correctLabel), null);
-    settleSolo(false, 'dogruYanlis', q, `⏰ Süre doldu! Bu bilgi ${correctLabel.toUpperCase()} idi.`);
+    settleSolo(false, 'dogruYanlis', q, `⏰ Süre doldu! Bu bilgi ${correctLabel.toUpperCase()} idi.`, q.answer ? '✅ Doğru' : '❌ Yanlış', null);
   });
 }
 
@@ -358,14 +385,14 @@ function renderOlder(q) {
       const correct = ev === older;
       revealAll();
       if (!correct) box.querySelector(`.opt-btn:nth-child(${ev === q.a ? 1 : 2})`).classList.add('wrong');
-      settleSolo(correct, 'eski', q, `Yanlış! Daha eski olan: ${older.text} (${formatYear(older.year)})`);
+      settleSolo(correct, 'eski', q, `Yanlış! Daha eski olan: ${older.text} (${formatYear(older.year)})`, older.text, ev.text);
     });
     box.appendChild(btn);
   });
 
   startTimer(() => {
     revealAll();
-    settleSolo(false, 'eski', q, `⏰ Süre doldu! Daha eski olan: ${older.text} (${formatYear(older.year)})`);
+    settleSolo(false, 'eski', q, `⏰ Süre doldu! Daha eski olan: ${older.text} (${formatYear(older.year)})`, older.text, null);
   });
 }
 
@@ -386,7 +413,7 @@ function matchDuel(answers, raw) {
 function renderDuel(q) {
   const G = window.GAME;
   $('q-body').innerHTML = `<p class="q-text">⚔️ ${q.prompt}</p>
-    <p class="q-hint">Sırayla yazın — süre dolan, yanlış veya tekrar yazan kaybeder! (${q.answers.length} cevap var)</p>`;
+    <p class="q-hint">Sıra sende olunca <b>tek bir cevap</b> yaz ve gönder — sıra rakibe geçer. Süre dolan, yanlış veya daha önce söyleneni yazan kaybeder! (${q.answers.length} cevap var)</p>`;
   $('duel-box').classList.remove('hidden');
   $('duel-found').innerHTML = '';
   $('duel-input').value = '';
@@ -438,7 +465,7 @@ function applyDuelState() {
   stopTimer();
   if (canAct) {
     $('duel-input').focus();
-    startTimer(() => G.duelTimeout());
+    startTimer(() => G.duelTimeout(), DUEL_TIME_LIMIT);
   } else {
     $('timer-row').classList.add('hidden');
   }
@@ -449,6 +476,7 @@ function duelSubmit() {
   if (!G.canDuelAct()) return;
   const raw = $('duel-input').value.trim();
   if (!raw) return;
+  $('duel-input').value = ''; // gönderince kutuyu temizle (eski yazı kalmasın)
   const q = questionOf(G.deck[G.current]);
   const match = matchDuel(q.answers, raw);
 
@@ -456,7 +484,7 @@ function duelSubmit() {
     const complete = G.duel.found.length + 1 === q.answers.length;
     G.duelFound(match.name, complete);
   } else {
-    const reason = match ? `"${match.name}" zaten söylendi!` : `"${raw}" listede yok!`;
+    const reason = match ? `"${match.name}" zaten söylenmişti!` : `"${raw}" listede yok!`;
     G.duelLose(reason);
   }
 }

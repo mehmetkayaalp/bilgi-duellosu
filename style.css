@@ -545,6 +545,16 @@ body {
 @keyframes dot-bounce { 0%, 60%, 100% { transform: translateY(0); opacity: 0.5; } 30% { transform: translateY(-9px); opacity: 1; } }
 
 .next-wait { margin-top: 14px; font-size: 0.9rem; color: var(--ink-soft); font-weight: 600; }
+.spectate-note {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+  background: #f3f0fb;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
 
 #q-body { margin-bottom: 20px; }
 .q-flag { font-size: 6rem; text-align: center; line-height: 1.1; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.18)); }
@@ -625,11 +635,12 @@ body {
 
 .duel-input-row { display: flex; gap: 10px; margin-bottom: 10px; }
 #duel-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0; /* dar ekranda küçülebilsin; "Gönder" taşmasın */
   padding: 13px 15px;
   border-radius: 13px;
   border: 2px solid #ddd8ef;
-  font-size: 1rem;
+  font-size: 16px; /* iOS Safari: 16px altı input'a odaklanınca sayfayı zoomlar */
   font-family: inherit;
   font-weight: 600;
   outline: none;
@@ -638,7 +649,10 @@ body {
 #duel-input:focus { border-color: #5b35ad; }
 
 .small-btn {
-  padding: 0 24px;
+  flex: 0 0 auto; /* küçülme/taşma yok */
+  white-space: nowrap;
+  padding: 0 22px;
+  min-height: 48px;
   border: none;
   border-radius: 13px;
   background: linear-gradient(135deg, #3c1f7e, #5b35ad);

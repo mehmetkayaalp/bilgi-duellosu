@@ -102,7 +102,10 @@ function buildOnlineGAME() {
       deck[online.m.current].by = online.m.turn;
       Net.updateRoom(online.code, {
         scores, stats, deck, phase: 'fact',
-        fact: { resultText: result.resultText, isWin: result.correct, factText: result.factText },
+        fact: {
+          resultText: result.resultText, isWin: result.correct, factText: result.factText,
+          answer: result.answer || null, chosen: result.chosen || null,
+        },
       }).catch(netErr);
     },
 
@@ -221,6 +224,10 @@ function onRoomSnapshot(raw) {
     if (!online.endedShown) {
       online.endedShown = true;
       showEndScreen(saveStats({ players: online.m.names, scores: online.m.scores, stats: online.m.stats }));
+      // Oyun bitti: kurucu odayı tamamen kapatır (açık oda kalmasın)
+      if (online.m.host === online.pid) {
+        try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(online.code))); } catch { /* önemsiz */ }
+      }
     }
     return;
   }
@@ -271,6 +278,8 @@ function onRoomSnapshot(raw) {
       online.lastFactKey = `f${cur}`;
       online.busy = false;
       const f = online.m.fact || {};
+      // Rakip izleyiciyse, onun gördüğü şıkları sonuçla boya
+      if (myIndex() !== online.m.turn && f.answer) revealReadonly(f.answer, f.chosen);
       showFact(f.resultText || '', f.isWin, f.factText || '');
     }
   }
@@ -351,23 +360,40 @@ function leaveOnline() {
   const code = online.code;
   const wasHost = online.m && online.m.host === online.pid;
   Net.stop();
-  if (code) {
+  // Oyun normal bittiyse (endedShown) oda zaten kapatıldı; tekrar yazıp
+  // hayalet oda oluşturma. Sadece oyun ortasında ayrılınca temizle.
+  if (code && !online.endedShown) {
     if (wasHost) {
-      // Kurucu ayrılırsa odayı tamamen kaldır (tek işlem — yarış yok).
-      // Rakip null snapshot alır → "oda kapandı".
-      try {
-        const { ref, remove } = Net.fns;
-        remove(ref(Net.db, Net.roomPath(code)));
-      } catch { /* önemsiz */ }
+      try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(code))); } catch { /* önemsiz */ }
     } else {
-      // Misafir ayrılırsa odayı bitmiş işaretle ki kurucu görsün.
       Net.updateRoom(code, { status: 'ended' }).catch(() => {});
     }
   }
+  resetOnlineState();
+  showScreen('screen-home');
+}
+
+function resetOnlineState() {
   online.code = null;
   online.m = null;
   online.endedShown = false;
-  showScreen('screen-home');
+  online.busy = false;
+  online.lastQKey = '';
+  online.lastFactKey = '';
+}
+
+// Online ekranına her girişte lobiyi temiz başlat (eski oda kodu kalmasın)
+function enterOnline() {
+  // Açık bir odamız varsa (host'sak) kapatıp çık
+  if (online.code) leaveOnline();
+  resetOnlineState();
+  $('online-room').classList.add('hidden');
+  $('online-join-box').classList.remove('hidden');
+  $('room-code').textContent = '------';
+  $('lobby-msg').textContent = '';
+  $('join-code').value = '';
+  $('btn-online-start').classList.add('hidden');
+  showScreen('screen-online');
 }
 
 function lobbyMsg(t) { $('lobby-msg').textContent = t || ''; }

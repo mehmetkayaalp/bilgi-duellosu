@@ -30,7 +30,9 @@ Trivia Crack tarzı ama daha sade ve tamamen Türkçe. PWA olarak telefona kurul
 
 - **🃏 Jokerler (oyun başına 1'er adet):** 50:50 (şıklı sorularda iki yanlış şık silinir) ve Joker Pas (Yaz Bakalım'da sırayı kaybetmeden devretme).
 - **⭐ Çift puan kartları:** Destede gizli 1-2 kart (14 kartta 2); açana o el tüm puanlar 2 katı.
-- **⏱️ Süre:** Her soruda 20 sn; düelloda her yazana ayrı ayrı 20 sn.
+- **⏱️ Süre:** Şıklı sorularda 20 sn; "Yaz Bakalım"da her yazana ayrı ayrı 30 sn.
+- **👀 Online'da rakibi görme:** Sıra rakipteyken onun sorusunu ve şıklarını görürsün; cevaplayınca doğru/yanlış şıkları renkli açılır.
+- **🚪 Otomatik oda kapanışı:** Oyun bitince kurucu odayı kapatır; açık oda kalmaz, tekrar oynamak için yeni oda kurulur.
 - **📊 Karne:** Oyun sonunda kategori bazlı doğru/yanlış dökümü + isimle eşleşen kalıcı genel istatistik (localStorage).
 - **✍️ Yazım toleransı:** Düelloda Türkçe karakter, büyük/küçük harf ve 6+ harfli kelimelerde 1 harflik hata tolere edilir ("Antartika", "Viyetnam", "Avusturalya" geçer).
 - **📱 PWA:** `manifest.json` + `sw.js` ile telefona kurulabilir ve internetsiz çalışır.

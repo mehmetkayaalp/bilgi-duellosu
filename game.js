@@ -194,5 +194,5 @@ $('btn-restart').addEventListener('click', () => {
 
 // ---------- Ana menü (mod seçimi) ----------
 $('mode-local').addEventListener('click', () => showScreen('screen-setup'));
-$('mode-online').addEventListener('click', () => showScreen('screen-online'));
+$('mode-online').addEventListener('click', () => enterOnline());
 document.querySelectorAll('.btn-back-home').forEach((b) => b.addEventListener('click', () => showScreen('screen-home')));
