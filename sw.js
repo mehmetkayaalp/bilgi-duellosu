@@ -2,7 +2,7 @@
 // Strateji: önce ağ, başarısız olursa önbellek (geliştirme sırasında
 // dosyalar bayatlamaz, internet yokken oyun yine de açılır).
 
-const CACHE = 'bilgi-duellosu-v2';
+const CACHE = 'bilgi-duellosu-v3';
 const ASSETS = [
   './',
   'index.html',
@@ -17,6 +17,8 @@ const ASSETS = [
   'icon-192.png',
   'icon-512.png',
 ];
+
+// HTML/JS/CSS için "önce ağ" (taze sürüm gelsin); diğerleri için cache yeterli.
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));

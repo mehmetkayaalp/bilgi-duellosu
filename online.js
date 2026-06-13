@@ -10,6 +10,7 @@ const online = {
   code: null,
   pid: null,
   totalCards: 10,
+  difficulty: 1,
   m: null,        // son normalize edilmiş oda durumu (ayna)
   busy: false,
   lastQKey: '',
@@ -30,6 +31,7 @@ function normalizeRoom(r) {
     status: r.status,
     phase: r.phase || 'pick',
     totalCards: r.totalCards || 10,
+    difficulty: typeof r.difficulty === 'number' ? r.difficulty : 1,
     names: [r.names?.p0 || 'Oyuncu 1', r.names?.p1 || 'Bekleniyor…'],
     ids: [r.ids?.p0 || null, r.ids?.p1 || null],
     scores: r.scores || [0, 0],
@@ -75,6 +77,7 @@ function buildOnlineGAME() {
     get totalCards() { return online.m.totalCards; },
     get current() { return online.m.current; },
     get duel() { return online.m.duel; },
+    get difficulty() { return online.m.difficulty; },
     get myIndex() { return myIndex(); },
 
     bonusMult: () => (online.m.deck[online.m.current]?.bonus ? 2 : 1),
@@ -307,6 +310,7 @@ async function createRoom() {
       host: online.pid,
       status: 'waiting',
       totalCards: online.totalCards,
+      difficulty: online.difficulty,
       names: { p0: name },
       ids: { p0: online.pid },
       turn: 0, played: 0, current: -1, phase: 'pick',
@@ -347,7 +351,7 @@ async function joinRoom() {
 function startOnlineGame() {
   if (online.m.host !== online.pid) return;
   if (!online.m.ids[1]) { lobbyMsg('Rakip henüz katılmadı.'); return; }
-  const deck = buildDeck(online.m.totalCards);
+  const deck = buildDeck(online.m.totalCards, online.m.difficulty);
   Net.updateRoom(online.code, {
     status: 'playing', phase: 'pick', turn: 0, played: 0, current: -1,
     scores: [0, 0], deck,
@@ -415,15 +419,17 @@ function renderLobbyRoom() {
     })
     .join('<div class="room-vs">VS</div>');
 
+  const dd = DIFFICULTIES[online.m.difficulty] || DIFFICULTIES[1];
+  const info = `${dd.icon} ${dd.name}${dd.sub ? ` (${dd.sub})` : ''} · ${online.m.totalCards} kart`;
   const ready = !!online.m.ids[1];
   if (isHost) {
     $('btn-online-start').classList.remove('hidden');
     $('btn-online-start').disabled = !ready;
     $('btn-online-start').textContent = ready ? '▶ Oyunu Başlat' : 'Rakip bekleniyor…';
-    $('room-wait').textContent = `Bu kodu rakibine ver: ${online.code}`;
+    $('room-wait').textContent = `${info} · Kodu rakibine ver`;
   } else {
     $('btn-online-start').classList.add('hidden');
-    $('room-wait').textContent = ready ? 'Kurucunun başlatması bekleniyor…' : 'Odaya bağlanıldı.';
+    $('room-wait').textContent = ready ? `${info} · Kurucunun başlatması bekleniyor…` : 'Odaya bağlanıldı.';
   }
 }
 
@@ -438,6 +444,14 @@ document.querySelectorAll('#screen-online .round-btn').forEach((btn) => {
 
 $('online-name').addEventListener('input', () => {
   $('avatar-preview-online').textContent = $('online-name').value.trim() ? initials($('online-name').value) : 'A';
+});
+
+document.querySelectorAll('#screen-online .diff-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#screen-online .diff-btn').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    online.difficulty = parseInt(btn.dataset.diff, 10);
+  });
 });
 
 $('btn-create').addEventListener('click', createRoom);

@@ -63,6 +63,16 @@
       </div>
 
       <div class="round-select">
+        <span class="round-label">Zorluk seç</span>
+        <div class="diff-options">
+          <button class="diff-btn" data-diff="0">🐣<b>Çok Kolay</b><small>Çocuk</small></button>
+          <button class="diff-btn selected" data-diff="1">🟢<b>Kolay</b></button>
+          <button class="diff-btn" data-diff="2">🟡<b>Orta</b></button>
+          <button class="diff-btn" data-diff="3">🔴<b>Zor</b></button>
+        </div>
+      </div>
+
+      <div class="round-select">
         <span class="round-label">Kaç kartla oynayalım?</span>
         <div class="round-options">
           <button class="round-btn" data-rounds="6">6<small>hızlı</small></button>
@@ -86,6 +96,16 @@
         <div class="player-input solo">
           <div class="avatar a1" id="avatar-preview-online">A</div>
           <input type="text" id="online-name" placeholder="İsmin" maxlength="14">
+        </div>
+
+        <div class="round-select">
+          <span class="round-label">Zorluk (kurucu seçer)</span>
+          <div class="diff-options">
+            <button class="diff-btn" data-diff="0">🐣<b>Çok Kolay</b><small>Çocuk</small></button>
+            <button class="diff-btn selected" data-diff="1">🟢<b>Kolay</b></button>
+            <button class="diff-btn" data-diff="2">🟡<b>Orta</b></button>
+            <button class="diff-btn" data-diff="3">🔴<b>Zor</b></button>
+          </div>
         </div>
 
         <div class="round-select">
@@ -172,6 +192,7 @@
             <input type="text" id="duel-input" placeholder="Cevabını yaz ve Enter'a bas..." autocomplete="off">
             <button id="duel-submit" class="small-btn">Gönder</button>
           </div>
+          <p id="duel-warn" class="duel-warn hidden"></p>
           <div class="duel-btn-row">
             <button id="duel-joker-pass" class="joker-btn">🃏 Joker Pas <small>(sıra geçer, kaybetmezsin)</small></button>
             <button id="duel-pass" class="pass-btn">🏳️ Pes ediyorum</button>

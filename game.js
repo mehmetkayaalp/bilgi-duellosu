@@ -7,6 +7,7 @@
 const local = {
   players: ['Oyuncu 1', 'Oyuncu 2'],
   totalCards: 10,
+  difficulty: 1,
   scores: [0, 0],
   turn: 0,
   played: 0,
@@ -38,6 +39,7 @@ function buildLocalGAME() {
     get totalCards() { return local.totalCards; },
     get current() { return local.current; },
     get duel() { return local.duel; },
+    get difficulty() { return local.difficulty; },
     myIndex: 0, // local'de anlamı yok; render kısayolları için
 
     bonusMult: () => (local.deck[local.current]?.bonus ? 2 : 1),
@@ -160,7 +162,7 @@ function startLocalGame() {
   local.scores = [0, 0];
   local.turn = 0;
   local.played = 0;
-  local.deck = buildDeck(local.totalCards);
+  local.deck = buildDeck(local.totalCards, local.difficulty);
   local.current = -1;
   local.picking = false;
   local.jokers = [{ fifty: true, pass: true }, { fifty: true, pass: true }];
@@ -179,6 +181,14 @@ document.querySelectorAll('#screen-setup .round-btn').forEach((btn) => {
     document.querySelectorAll('#screen-setup .round-btn').forEach((b) => b.classList.remove('selected'));
     btn.classList.add('selected');
     local.totalCards = parseInt(btn.dataset.rounds, 10);
+  });
+});
+
+document.querySelectorAll('#screen-setup .diff-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#screen-setup .diff-btn').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    local.difficulty = parseInt(btn.dataset.diff, 10);
   });
 });
 

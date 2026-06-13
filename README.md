@@ -106,8 +106,17 @@ arayüzü çizer. Böylece soru/render mantığı tek yerde, mod farkı sadece "
 
 "Hangisi Daha Eski?" için yıl negatifse MÖ demektir: `{ a: { text: '...', year: -776 }, b: { ... }, fact: '...' }`
 
+## Zorluk Seviyeleri
+
+Oyun başında (hem aynı cihazda hem online) 4 seviyeden biri seçilir:
+🐣 **Çok Kolay (Çocuk)** · 🟢 **Kolay** · 🟡 **Orta** · 🔴 **Zor**.
+Her sorunun `data.js` içinde bir `d` alanı vardır (0=çocuk, 1=kolay, 2=orta, 3=zor);
+deste seçilen zorluğa göre kurulur. Bir kategoride o seviyede soru yoksa en yakın
+seviyeye düşülür (oyun asla boş kalmaz). Çocuk seviyesi; Atatürk, en bilinen bayraklar,
+milli bayramlar, piramitler, Türkiye'nin bölgeleri gibi en basit soruları içerir.
+
 ## Yol Haritası
 
-- [ ] Zorluk seviyeleri: kolay / orta / zor / karışık (`data.js`'e `difficulty` alanı eklenecek)
+- [ ] "Karışık" zorluk seçeneği (tüm seviyelerden)
 - [ ] Ses efektleri
-- [ ] Mobil app + telefonlar arası online oyun (backend gerekli — Firebase düşünülüyor)
+- [ ] Mobil app (aynı motor + Firebase ile taşınabilir)

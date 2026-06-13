@@ -54,9 +54,20 @@ function initials(name) {
   return (name || '').trim().charAt(0).toLocaleUpperCase('tr') || '?';
 }
 
-// Deste kur: kategorileri dengeli dağıt, her karta tekrarsız soru (qIndex) ata,
-// en az 1 düello garanti, 1-2 gizli çift puan kartı serpiştir.
-function buildDeck(n) {
+// Bir kategorinin, seçilen zorluktaki soru indekslerini döndürür.
+// O zorlukta soru yoksa en yakın zorluğa, o da yoksa tümüne düşer.
+function poolFor(cat, diff) {
+  const all = DATA[cat];
+  const idxAt = (d) => all.map((q, i) => [q, i]).filter(([q]) => (q.d ?? 1) === d).map(([, i]) => i);
+  let pool = idxAt(diff);
+  if (pool.length === 0) pool = [...idxAt(diff - 1), ...idxAt(diff + 1)];
+  if (pool.length === 0) pool = all.map((_, i) => i);
+  return pool;
+}
+
+// Deste kur: kategorileri dengeli dağıt, her karta seçilen zorlukta soru (qIndex)
+// ata, en az 1 düello garanti, 1-2 gizli çift puan kartı serpiştir.
+function buildDeck(n, diff = 1) {
   const cats = shuffle(Object.keys(CATEGORIES));
   const list = [];
   for (let i = 0; i < n; i++) list.push(cats[i % cats.length]);
@@ -65,7 +76,7 @@ function buildDeck(n) {
 
   const pools = {};
   const deck = catList.map((cat) => {
-    if (!pools[cat] || pools[cat].length === 0) pools[cat] = shuffle(DATA[cat].map((_, i) => i));
+    if (!pools[cat] || pools[cat].length === 0) pools[cat] = shuffle(poolFor(cat, diff));
     return { cat, qIndex: pools[cat].pop(), used: false, badge: null, by: null, bonus: false };
   });
 
@@ -122,7 +133,8 @@ function updateScoreboard() {
   const G = window.GAME;
   $('pscore1').textContent = G.scores[0];
   $('pscore2').textContent = G.scores[1];
-  $('progress').textContent = `Kart ${Math.min(G.played + 1, G.totalCards)} / ${G.totalCards}`;
+  const diff = DIFFICULTIES[G.difficulty ?? 1];
+  $('progress').textContent = `${diff.icon} ${diff.name} · Kart ${Math.min(G.played + 1, G.totalCards)} / ${G.totalCards}`;
   $('progress-fill').style.width = `${(G.played / G.totalCards) * 100}%`;
   $('score-box-1').classList.toggle('turn-active', G.turn === 0);
   $('score-box-2').classList.toggle('turn-active', G.turn === 1);
@@ -425,6 +437,7 @@ function applyDuelState() {
   const G = window.GAME;
   const d = G.duel;
   const q = questionOf(G.deck[G.current]);
+  $('duel-warn').classList.add('hidden');
 
   // Bulunan çipleri yeniden çiz
   const found = $('duel-found');
@@ -483,10 +496,30 @@ function duelSubmit() {
   if (match && !G.duel.found.includes(match.name)) {
     const complete = G.duel.found.length + 1 === q.answers.length;
     G.duelFound(match.name, complete);
+  } else if (match) {
+    // Zaten söylenmiş cevap → KAYBETME, uyar ve o kutuyu yanıp söndür, tekrar dene
+    flashDuplicate(match.name);
   } else {
-    const reason = match ? `"${match.name}" zaten söylenmişti!` : `"${raw}" listede yok!`;
-    G.duelLose(reason);
+    // Listede olmayan cevap → düelloyu kaybeder
+    G.duelLose(`"${raw}" listede yok!`);
   }
+}
+
+// Daha önce söylenen bir cevap yazıldığında: uyarı + ilgili çipi yanıp söndür
+function flashDuplicate(name) {
+  $('duel-found').querySelectorAll('.chip').forEach((c) => {
+    if (c.textContent === name) {
+      c.classList.remove('blink');
+      void c.offsetWidth; // animasyonu yeniden tetikle
+      c.classList.add('blink');
+    }
+  });
+  const w = $('duel-warn');
+  w.textContent = `"${name}" zaten söylendi! Başka bir cevap yaz.`;
+  w.classList.remove('hidden');
+  clearTimeout(flashDuplicate._t);
+  flashDuplicate._t = setTimeout(() => w.classList.add('hidden'), 2600);
+  $('duel-input').focus();
 }
 
 // ---------- Bilgi paneli ----------
