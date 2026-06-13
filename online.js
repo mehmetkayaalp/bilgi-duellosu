@@ -16,6 +16,9 @@ const online = {
   lastQKey: '',
   lastFactKey: '',
   endedShown: false,
+  matchmaking: false,  // Hızlı Eşleşme modundayız
+  claiming: false,     // şu an bir oda kapmaya çalışıyoruz
+  queueUnsub: null,    // eşleşme kuyruğu aboneliği
 };
 
 function getPid() {
@@ -221,7 +224,11 @@ function onRoomSnapshot(raw) {
 
   online.m = normalizeRoom(raw);
 
-  if (online.m.status === 'waiting') { renderLobbyRoom(); return; }
+  if (online.m.status === 'waiting') {
+    if (online.matchmaking) renderMatchWaiting();
+    else renderLobbyRoom();
+    return;
+  }
 
   if (online.m.status === 'ended') {
     if (!online.endedShown) {
@@ -235,7 +242,8 @@ function onRoomSnapshot(raw) {
     return;
   }
 
-  // status: playing
+  // status: playing — oyuna girdik, eşleşme kuyruğu aboneliğini kapat
+  if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   if (!$('screen-game').classList.contains('active')) {
     setPlayersUI();
     showScreen('screen-game');
@@ -378,12 +386,15 @@ function leaveOnline() {
 }
 
 function resetOnlineState() {
+  if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   online.code = null;
   online.m = null;
   online.endedShown = false;
   online.busy = false;
   online.lastQKey = '';
   online.lastFactKey = '';
+  online.matchmaking = false;
+  online.claiming = false;
 }
 
 // Online ekranına her girişte lobiyi temiz başlat (eski oda kodu kalmasın)
@@ -391,6 +402,7 @@ function enterOnline() {
   // Açık bir odamız varsa (host'sak) kapatıp çık
   if (online.code) leaveOnline();
   resetOnlineState();
+  syncDiffFrom('screen-online');
   $('online-room').classList.add('hidden');
   $('online-join-box').classList.remove('hidden');
   $('room-code').textContent = '------';
@@ -433,6 +445,184 @@ function renderLobbyRoom() {
   }
 }
 
+// ============================================================
+//  HIZLI EŞLEŞME (rastgele rakip)
+//  Kuyruk: /matchmaking/{code} = { host, diff, ts }
+//  Bekleyen oyuncular burada listelenir; arayan biri kapar.
+// ============================================================
+
+function matchMsg(t) { $('match-msg').textContent = t || ''; }
+
+function showMatchSearching(status, sub) {
+  $('match-setup').classList.add('hidden');
+  $('match-searching').classList.remove('hidden');
+  $('match-status').textContent = status || 'Rakip aranıyor…';
+  $('match-sub').textContent = sub || '';
+}
+
+function showMatchSetup() {
+  $('match-searching').classList.add('hidden');
+  $('match-setup').classList.remove('hidden');
+}
+
+function renderMatchWaiting() {
+  // Eşleşme modunda bekleme ekranı (oda kodu vb. gösterme)
+  if (!$('screen-match').classList.contains('active')) showScreen('screen-match');
+  const joined = online.m && online.m.ids[1];
+  showMatchSearching(
+    joined ? 'Rakip bulundu! Başlatılıyor…' : 'Rakip aranıyor…',
+    joined ? '' : 'İlk gelen rakiple eşleşeceksin.'
+  );
+}
+
+// Bir bekleme odasını atomik olarak kap (transaction)
+async function tryClaim(code, name) {
+  try {
+    const res = await Net.claim(code, (room) => {
+      if (!room) return;                       // oda yok
+      if (room.status !== 'waiting') return;   // başlamış
+      if (room.ids && room.ids.p1) return;     // dolu
+      room.ids = room.ids || {};
+      room.names = room.names || {};
+      room.ids.p1 = online.pid;
+      room.names.p1 = name;
+      return room;
+    });
+    const v = res.committed && res.snapshot.val();
+    return !!(v && v.ids && v.ids.p1 === online.pid);
+  } catch (e) { return false; }
+}
+
+// Kapılan odada oyunu başlat (deste kur + playing) — kapan oyuncu yapar
+async function startClaimedGame(code) {
+  online.code = code;
+  online.matchmaking = true;
+  online.endedShown = false;
+  online.busy = false;
+  await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
+  const room = await Net.getRoom(code);
+  const diff = typeof room?.difficulty === 'number' ? room.difficulty : 1;
+  const deck = buildDeck(room?.totalCards || 10, diff);
+  await Net.updateRoom(code, {
+    status: 'playing', phase: 'pick', turn: 0, played: 0, current: -1,
+    scores: [0, 0], deck,
+    jokers: [{ fifty: true, pass: true }, { fifty: true, pass: true }],
+    stats: [{}, {}], fact: null, duel: null,
+  });
+  Net.subscribe(code, onRoomSnapshot);
+  buildOnlineGAME();
+}
+
+async function quickMatch() {
+  const name = $('match-name').value.trim();
+  if (!name) { matchMsg('Önce ismini yaz.'); return; }
+  if (!Net.isConfigured()) { matchMsg('⚠️ Firebase anahtarları girilmemiş — README\'deki kurulumu yap.'); return; }
+
+  online.pid = getPid();
+  online.matchmaking = true;
+  online.endedShown = false;
+  showMatchSearching('Rakip aranıyor…');
+
+  try {
+    await Net.init();
+    // 1) Kuyruğu oku, bekleyen birini kapmayı dene (önce aynı zorluk)
+    const queue = (await Net.getPath('matchmaking')) || {};
+    const myDiff = online.difficulty;
+    const codes = Object.keys(queue).filter((c) => queue[c] && queue[c].host && queue[c].host !== online.pid);
+    const ordered = [...shuffle(codes.filter((c) => queue[c].diff === myDiff)), ...shuffle(codes.filter((c) => queue[c].diff !== myDiff))];
+    for (const code of ordered) {
+      if (await tryClaim(code, name)) { await startClaimedGame(code); return; }
+      // kapılamadıysa (oda gitmiş olabilir) kuyruktan temizle
+      await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
+    }
+    // 2) Kimse yok → kendi bekleme odanı kur ve bekle
+    await createWaitingMatchRoom(name);
+  } catch (e) { netErr(e); showMatchSetup(); }
+}
+
+async function createWaitingMatchRoom(name) {
+  let code = genCode();
+  for (let t = 0; t < 5 && (await Net.getRoom(code)); t++) code = genCode();
+  online.code = code;
+  await Net.createRoom(code, {
+    host: online.pid, status: 'waiting',
+    difficulty: online.difficulty, totalCards: 10,
+    names: { p0: name }, ids: { p0: online.pid },
+    turn: 0, played: 0, current: -1, phase: 'pick',
+  });
+  await Net.setPath(`matchmaking/${code}`, { host: online.pid, diff: online.difficulty, ts: Date.now() });
+  // Bağlantı koparsa hem odayı hem kuyruk kaydını temizle
+  try {
+    const { ref, onDisconnect } = Net.fns;
+    onDisconnect(ref(Net.db, Net.roomPath(code))).remove();
+    onDisconnect(ref(Net.db, `matchmaking/${code}`)).remove();
+  } catch { /* önemsiz */ }
+  Net.subscribe(code, onRoomSnapshot);
+  buildOnlineGAME();
+  watchQueueWhileWaiting(name);
+}
+
+// İki kişi aynı anda oda kurarsa ikisi de beklemesin: kuyruğu dinle,
+// pid karşılaştırmasıyla (yalnızca büyük pid kapar) tek taraf eşleştirsin.
+function watchQueueWhileWaiting(name) {
+  if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
+  online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
+    if (!online.matchmaking || !online.code || online.claiming) return;
+    queue = queue || {};
+    const cands = Object.keys(queue).filter(
+      (c) => c !== online.code && queue[c] && queue[c].host && queue[c].host < online.pid
+    );
+    if (cands.length === 0) return;
+    online.claiming = true;
+    (async () => {
+      for (const code of cands) {
+        if (await tryClaim(code, name)) {
+          await teardownMyWaitingRoom();
+          await startClaimedGame(code);
+          return;
+        }
+      }
+      online.claiming = false;
+    })();
+  });
+}
+
+async function teardownMyWaitingRoom() {
+  if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
+  Net.stop();
+  const old = online.code;
+  if (old) {
+    try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(old))); } catch {}
+    await Net.setPath(`matchmaking/${old}`, null).catch(() => {});
+  }
+}
+
+function cancelMatch() {
+  // Beklerken iptal: odamı ve kuyruk kaydımı temizle
+  if (online.code && !online.endedShown && online.m && online.m.host === online.pid) {
+    teardownMyWaitingRoom();
+  } else {
+    Net.stop();
+  }
+  resetOnlineState();
+  showMatchSetup();
+  showScreen('screen-home');
+}
+
+function syncDiffFrom(screenId) {
+  const sel = document.querySelector(`#${screenId} .diff-btn.selected`);
+  if (sel) online.difficulty = parseInt(sel.dataset.diff, 10);
+}
+
+function enterMatch() {
+  if (online.code) leaveOnline();
+  resetOnlineState();
+  syncDiffFrom('screen-match');
+  showMatchSetup();
+  $('match-msg').textContent = '';
+  showScreen('screen-match');
+}
+
 // ---------- Online ekranı olayları ----------
 document.querySelectorAll('#screen-online .round-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -458,3 +648,19 @@ $('btn-create').addEventListener('click', createRoom);
 $('btn-join').addEventListener('click', joinRoom);
 $('btn-online-start').addEventListener('click', startOnlineGame);
 $('btn-online-leave').addEventListener('click', leaveOnline);
+
+// ---------- Hızlı Eşleşme ekranı olayları ----------
+$('match-name').addEventListener('input', () => {
+  $('avatar-preview-match').textContent = $('match-name').value.trim() ? initials($('match-name').value) : 'A';
+});
+
+document.querySelectorAll('#screen-match .diff-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#screen-match .diff-btn').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    online.difficulty = parseInt(btn.dataset.diff, 10);
+  });
+});
+
+$('btn-match').addEventListener('click', quickMatch);
+$('btn-match-cancel').addEventListener('click', cancelMatch);

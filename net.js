@@ -27,7 +27,36 @@ const Net = {
     this.fns = {
       ref: dbMod.ref, set: dbMod.set, update: dbMod.update, onValue: dbMod.onValue,
       get: dbMod.get, child: dbMod.child, onDisconnect: dbMod.onDisconnect, remove: dbMod.remove,
+      runTransaction: dbMod.runTransaction,
     };
+  },
+
+  // Bir alt yolun anlık değerini oku (örn. "matchmaking")
+  async getPath(subpath) {
+    await this.init();
+    const { ref, get } = this.fns;
+    const snap = await get(ref(this.db, subpath));
+    return snap.exists() ? snap.val() : null;
+  },
+
+  // Kök seviye bir yola yaz (null = sil). Örn. "matchmaking/123456"
+  async setPath(path, value) {
+    await this.init();
+    const { ref, set } = this.fns;
+    await set(ref(this.db, path), value);
+  },
+
+  // Bir yolu canlı dinle; aboneliği kapatan fonksiyonu döndürür
+  subscribePath(path, cb) {
+    const { ref, onValue } = this.fns;
+    return onValue(ref(this.db, path), (snap) => cb(snap.exists() ? snap.val() : null));
+  },
+
+  // Atomik talep (iki kişi aynı odayı kapamasın diye)
+  async claim(code, mutator) {
+    await this.init();
+    const { ref, runTransaction } = this.fns;
+    return runTransaction(ref(this.db, this.roomPath(code)), mutator);
   },
 
   roomPath(code) { return `rooms/${code}`; },

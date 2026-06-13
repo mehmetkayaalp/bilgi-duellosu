@@ -36,10 +36,15 @@
           <span class="mode-title">Aynı Cihazda</span>
           <span class="mode-desc">Tek telefonda sırayla oynayın</span>
         </button>
+        <button id="mode-match" class="mode-card highlight">
+          <span class="mode-icon">⚡</span>
+          <span class="mode-title">Hızlı Eşleşme</span>
+          <span class="mode-desc">O an bekleyen rastgele biriyle oyna</span>
+        </button>
         <button id="mode-online" class="mode-card">
-          <span class="mode-icon">🌐</span>
-          <span class="mode-title">Online</span>
-          <span class="mode-desc">Ayrı cihazlardan, internet üzerinden</span>
+          <span class="mode-icon">🤝</span>
+          <span class="mode-title">Arkadaşınla Oyna</span>
+          <span class="mode-desc">Oda kodu paylaş, arkadaşın katılsın</span>
         </button>
       </div>
     </div>
@@ -90,7 +95,7 @@
   <section id="screen-online" class="screen">
     <div class="setup-box">
       <button class="btn-back-home back-link">← Ana menü</button>
-      <h1 class="logo small">Online Oyun</h1>
+      <h1 class="logo small">Arkadaşınla Oyna</h1>
 
       <div id="online-join-box">
         <div class="player-input solo">
@@ -135,6 +140,42 @@
         <p class="room-wait" id="room-wait"></p>
         <button id="btn-online-start" class="big-btn hidden">▶ Oyunu Başlat</button>
         <button id="btn-online-leave" class="pass-btn" style="margin-top:14px">Odadan Ayrıl</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== HIZLI EŞLEŞME ======== -->
+  <section id="screen-match" class="screen">
+    <div class="setup-box">
+      <button class="btn-back-home back-link">← Ana menü</button>
+      <h1 class="logo small">⚡ Hızlı Eşleşme</h1>
+
+      <div id="match-setup">
+        <p class="tagline" style="margin-bottom:22px">O an bekleyen rastgele bir rakiple eşleşirsin. Kimse yoksa biri gelene kadar beklersin.</p>
+        <div class="player-input solo">
+          <div class="avatar a1" id="avatar-preview-match">A</div>
+          <input type="text" id="match-name" placeholder="İsmin" maxlength="14">
+        </div>
+
+        <div class="round-select">
+          <span class="round-label">Tercih ettiğin zorluk</span>
+          <div class="diff-options">
+            <button class="diff-btn" data-diff="0">🐣<b>Çok Kolay</b><small>Çocuk</small></button>
+            <button class="diff-btn selected" data-diff="1">🟢<b>Kolay</b></button>
+            <button class="diff-btn" data-diff="2">🟡<b>Orta</b></button>
+            <button class="diff-btn" data-diff="3">🔴<b>Zor</b></button>
+          </div>
+        </div>
+
+        <button id="btn-match" class="big-btn">⚡ &nbsp;Rakip Bul</button>
+        <p id="match-msg" class="lobby-msg"></p>
+      </div>
+
+      <div id="match-searching" class="hidden">
+        <div class="match-spinner"></div>
+        <p class="match-status" id="match-status">Rakip aranıyor…</p>
+        <p class="match-sub" id="match-sub"></p>
+        <button id="btn-match-cancel" class="pass-btn" style="margin-top:18px">İptal</button>
       </div>
     </div>
   </section>

@@ -37,12 +37,13 @@ Trivia Crack tarzı ama daha sade ve tamamen Türkçe. PWA olarak telefona kurul
 - **✍️ Yazım toleransı:** Düelloda Türkçe karakter, büyük/küçük harf ve 6+ harfli kelimelerde 1 harflik hata tolere edilir ("Antartika", "Viyetnam", "Avusturalya" geçer).
 - **📱 PWA:** `manifest.json` + `sw.js` ile telefona kurulabilir ve internetsiz çalışır.
 
-## İki Mod
+## Üç Mod
 
-Ana menüde iki seçenek var:
+Ana menüde üç seçenek var:
 
-- **📱 Aynı Cihazda:** Tek telefon/bilgisayarda iki kişi sırayla oynar (orijinal mod, internet gerekmez).
-- **🌐 Online:** İki kişi ayrı cihazlardan, internet üzerinden oynar. Biri oda kurar (6 haneli kod), diğeri kodu girip katılır. Firebase gerektirir (aşağıya bak).
+- **📱 Aynı Cihazda:** Tek telefon/bilgisayarda iki kişi sırayla oynar (internet gerekmez).
+- **⚡ Hızlı Eşleşme:** O an bekleyen rastgele bir rakiple eşleşirsin. Kimse yoksa biri gelene kadar beklersin. Aynı zorluğu tercih edenler önce eşleşir. Firebase gerektirir.
+- **🤝 Arkadaşınla Oyna:** Biri oda kurar (6 haneli kod), diğeri kodu girip katılır. Firebase gerektirir.
 
 ## Telefonda Hemen Test (hosting'siz)
 
@@ -68,10 +69,16 @@ Sunucu yazmana/işletmene gerek yok; Firebase Realtime Database bunu ücretsiz h
 5. Bir cihaz "Oda Kur" der, kodu söyler; diğeri "Katıl"a kodu girer; kurucu "Başlat"a basar.
 
 > **Güvenlik notu:** "Test mode" ~30 gün sonra kapanır. Sürekli kullanım için
-> Realtime Database → **Rules** ekranına en azından şunu yaz (sadece `rooms` altına izin):
+> Realtime Database → **Rules** ekranına şunu yaz (`rooms` + Hızlı Eşleşme için `matchmaking`):
 > ```json
-> { "rules": { "rooms": { "$code": { ".read": true, ".write": true } } } }
+> {
+>   "rules": {
+>     "rooms":       { "$code": { ".read": true, ".write": true } },
+>     "matchmaking": { ".read": true, ".write": true }
+>   }
+> }
 > ```
+> ⚠️ Hızlı Eşleşme'nin çalışması için `matchmaking` izni şarttır; yoksa eşleşme yazımları reddedilir.
 > Bu basit kural küçük arkadaş grubu için yeterli; herkese açık yayında daha sıkı kural gerekir.
 
 ## Telefona PWA Olarak Kurma
