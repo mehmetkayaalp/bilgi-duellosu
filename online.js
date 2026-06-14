@@ -1,10 +1,14 @@
 // ============================================================
-// BİLGİ DÜELLOSU — "Online" denetleyici
-// Firebase Realtime Database üzerinden oda kurma/katılma ve
-// gerçek zamanlı senkronizasyon. Motoru (engine.js) kullanır.
-// Tek doğruluk kaynağı DB'dir: her hamle DB'ye yazılır, arayüz
-// gelen anlık güncellemeyle (snapshot) çizilir.
+// BİLGİ DÜELLOSU — "Online" denetleyici (EŞZAMANLI model)
+// İki oyuncu AYNI soruyu AYNI anda görür ve cevaplar. Süre/iki
+// cevap dolunca açılış: doğru cevap + kim ne işaretledi + puanlar.
+// Doğru bilen taban puan + hız bonusu alır (ikisi de alabilir).
+// Tek doğruluk kaynağı DB'dir; geçişleri "host" (oda kurucusu) yürütür.
 // ============================================================
+
+const ANSWER_LIMIT = 15;  // saniye: her soru için cevaplama süresi
+const REVEAL_HOLD = 6;    // saniye: "doğru cevap + kim ne dedi" ekranı süresi
+const SPEED_MAX = 8;      // doğru + hızlı cevaba verilen en fazla bonus
 
 const online = {
   code: null,
@@ -12,14 +16,16 @@ const online = {
   totalCards: 15,
   difficulty: 1,        // Arkadaşınla Oyna (oda kodu) modunda tek zorluk
   difficulties: [1],    // Hızlı Eşleşme modunda kabul edilen zorluklar (çoklu)
-  m: null,        // son normalize edilmiş oda durumu (ayna)
-  busy: false,
-  lastQKey: '',
-  lastFactKey: '',
+  m: null,              // son normalize edilmiş oda durumu (ayna)
+  view: null,           // o anki sorunun görünümü (gövde/şıklar/doğru)
+  viewKey: '',          // gereksiz yeniden çizimi önlemek için
+  matchmaking: false,
+  claiming: false,
   endedShown: false,
-  matchmaking: false,  // Hızlı Eşleşme modundayız
-  claiming: false,     // şu an bir oda kapmaya çalışıyoruz
-  queueUnsub: null,    // eşleşme kuyruğu aboneliği
+  queueUnsub: null,
+  hostTimer: null,      // host'un faz geçiş zamanlayıcısı
+  timerKey: '',         // aynı faz için tek zamanlayıcı
+  revealIv: null,       // açılış geri sayım arayüzü
 };
 
 function getPid() {
@@ -33,25 +39,20 @@ function clone(x) { return x ? JSON.parse(JSON.stringify(x)) : x; }
 function normalizeRoom(r) {
   return {
     status: r.status,
-    phase: r.phase || 'pick',
-    totalCards: r.totalCards || 10,
+    phase: r.phase || 'answer',
+    totalCards: r.totalCards || 15,
     difficulty: typeof r.difficulty === 'number' ? r.difficulty : 1,
+    difficulties: r.difficulties || null,
     names: [r.names?.p0 || 'Oyuncu 1', r.names?.p1 || 'Bekleniyor…'],
     ids: [r.ids?.p0 || null, r.ids?.p1 || null],
     scores: r.scores || [0, 0],
-    jokers: r.jokers || [{ fifty: true, pass: true }, { fifty: true, pass: true }],
     stats: r.stats ? [r.stats[0] || {}, r.stats[1] || {}] : [{}, {}],
-    deck: (r.deck || []).map((c) => ({
-      cat: c.cat, qIndex: c.qIndex, used: !!c.used,
-      badge: c.badge || null, by: typeof c.by === 'number' ? c.by : null, bonus: !!c.bonus,
-    })),
-    turn: r.turn || 0,
-    played: r.played || 0,
-    current: typeof r.current === 'number' ? r.current : -1,
-    fact: r.fact || null,
-    duel: r.duel
-      ? { found: r.duel.found || [], writer: r.duel.writer || 0, over: !!r.duel.over }
-      : { found: [], writer: 0, over: false },
+    deck: (r.deck || []).map((c) => ({ cat: c.cat, qIndex: c.qIndex, bonus: !!c.bonus })),
+    qi: typeof r.qi === 'number' ? r.qi : 0,
+    qStart: r.qStart || 0,
+    answers: r.answers || {},     // {0:{choice,correct,ms}, 1:{...}}
+    gained: r.gained || [0, 0],
+    revealStart: r.revealStart || 0,
     host: r.host,
   };
 }
@@ -60,6 +61,7 @@ function myIndex() {
   if (!online.m) return -1;
   return online.m.ids[0] === online.pid ? 0 : online.m.ids[1] === online.pid ? 1 : -1;
 }
+function isHost() { return online.m && online.m.host === online.pid; }
 
 function recordStatO(stats, cat, ok) {
   const s = (stats[cat] ||= { c: 0, t: 0 });
@@ -67,154 +69,93 @@ function recordStatO(stats, cat, ok) {
   if (ok) s.c++;
 }
 
-// ---------- window.GAME kancaları (online) ----------
-function buildOnlineGAME() {
-  window.GAME = {
-    isOnline: true,
-    get players() { return online.m.names; },
-    get scores() { return online.m.scores; },
-    get jokers() { return online.m.jokers; },
-    get stats() { return online.m.stats; },
-    get deck() { return online.m.deck; },
-    get turn() { return online.m.turn; },
-    get played() { return online.m.played; },
-    get totalCards() { return online.m.totalCards; },
-    get current() { return online.m.current; },
-    get duel() { return online.m.duel; },
-    get difficulty() { return online.m.difficulty; },
-    get myIndex() { return myIndex(); },
-
-    bonusMult: () => (online.m.deck[online.m.current]?.bonus ? 2 : 1),
-    canPick: () => online.m.status === 'playing' && online.m.phase === 'pick' && myIndex() === online.m.turn && !online.busy,
-    canDuelAct: () => online.m.phase === 'duel' && !online.m.duel.over && online.m.duel.writer === myIndex() && !online.busy,
-    ownsAdvance: () => myIndex() === online.m.turn,
-
-    onPick(i) {
-      if (!this.canPick() || online.m.deck[i].used) return;
-      online.busy = true;
-      const cat = online.m.deck[i].cat;
-      const patch = { current: i, phase: cat === 'duello' ? 'duel' : 'question' };
-      if (cat === 'duello') patch.duel = { found: [], writer: online.m.turn, over: false };
-      Net.updateRoom(online.code, patch).catch(netErr);
-    },
-
-    commitSolo(result) {
-      online.busy = true;
-      const scores = clone(online.m.scores);
-      const stats = clone(online.m.stats);
-      const deck = clone(online.m.deck);
-      scores[online.m.turn] += result.points;
-      recordStatO(stats[online.m.turn], result.cat, result.correct);
-      deck[online.m.current].badge = result.badge;
-      deck[online.m.current].by = online.m.turn;
-      Net.updateRoom(online.code, {
-        scores, stats, deck, phase: 'fact',
-        fact: {
-          resultText: result.resultText, isWin: result.correct, factText: result.factText,
-          answer: result.answer || null, chosen: result.chosen || null,
-        },
-      }).catch(netErr);
-    },
-
-    useFifty() {
-      const jokers = clone(online.m.jokers);
-      jokers[online.m.turn].fifty = false;
-      Net.updateRoom(online.code, { jokers }).catch(netErr);
-    },
-
-    duelFound(name, complete) {
-      online.busy = true;
-      $('duel-input').disabled = true;
-      const d = online.m.duel;
-      const found = [...d.found, name];
-      if (complete) {
-        const pts = POINTS.duelDraw * this.bonusMult();
-        const scores = clone(online.m.scores);
-        const stats = clone(online.m.stats);
-        const deck = clone(online.m.deck);
-        scores[0] += pts; scores[1] += pts;
-        recordStatO(stats[0], 'duello', true);
-        recordStatO(stats[1], 'duello', true);
-        deck[online.m.current].badge = { cls: 'draw', icon: '🤝' };
-        deck[online.m.current].by = online.m.turn;
-        Net.updateRoom(online.code, {
-          scores, stats, deck, phase: 'fact',
-          duel: { found, writer: d.writer, over: true },
-          fact: { resultText: `İnanılmaz! Hepsini buldunuz 🤝 İkinize de +${pts} puan`, isWin: true, factText: duelNote() },
-        }).catch(netErr);
-      } else {
-        Net.updateRoom(online.code, { duel: { found, writer: 1 - d.writer, over: false } }).catch(netErr);
-      }
-    },
-
-    duelLose(reason) {
-      online.busy = true;
-      $('duel-input').disabled = true;
-      const d = online.m.duel;
-      const winner = 1 - d.writer;
-      const m = this.bonusMult();
-      const scores = clone(online.m.scores);
-      const stats = clone(online.m.stats);
-      const deck = clone(online.m.deck);
-      scores[winner] += POINTS.duelWin * m;
-      recordStatO(stats[winner], 'duello', true);
-      recordStatO(stats[1 - winner], 'duello', false);
-      deck[online.m.current].badge = { cls: `p${winner + 1}`, icon: '⚔️' };
-      deck[online.m.current].by = winner;
-      Net.updateRoom(online.code, {
-        scores, stats, deck, phase: 'fact',
-        duel: { found: d.found, writer: d.writer, over: true },
-        fact: {
-          resultText: `${reason} ${online.m.names[winner]} düelloyu kazandı! +${POINTS.duelWin * m} puan`,
-          isWin: false, factText: duelNote(),
-        },
-      }).catch(netErr);
-    },
-
-    duelTimeout() { this.duelLose(`⏰ ${online.m.names[online.m.duel.writer]} süresinde yazamadı!`); },
-
-    useDuelPass() {
-      const d = online.m.duel;
-      const jokers = clone(online.m.jokers);
-      jokers[d.writer].pass = false;
-      online.busy = true;
-      $('duel-input').disabled = true;
-      Net.updateRoom(online.code, { jokers, duel: { found: d.found, writer: 1 - d.writer, over: false } }).catch(netErr);
-    },
-
-    next() {
-      if (!this.ownsAdvance()) return;
-      online.busy = true;
-      const deck = clone(online.m.deck);
-      deck[online.m.current].used = true;
-      const played = online.m.played + 1;
-      const patch = {
-        deck, played, current: -1, phase: 'pick',
-        turn: 1 - online.m.turn, fact: null, duel: null,
-      };
-      if (played >= online.m.totalCards) patch.status = 'ended';
-      Net.updateRoom(online.code, patch).catch(netErr);
-    },
-  };
-}
-
-function duelNote() {
-  const card = online.m.deck[online.m.current];
-  return DATA[card.cat][card.qIndex].note || 'Soluk renkli çipler, söylenmeyen cevaplar.';
-}
-
 function netErr(e) {
   console.error(e);
   alert('Bağlantı hatası: ' + (e?.message || e));
 }
 
-// ---------- Anlık güncelleme (snapshot) işleyici ----------
+function clearOnlineTimers() {
+  if (online.hostTimer) { clearTimeout(online.hostTimer); online.hostTimer = null; }
+  if (online.revealIv) { clearInterval(online.revealIv); online.revealIv = null; }
+  online.timerKey = '';
+}
+
+// ---------- window.GAME (online) — motorun ortak fonksiyonları için ----------
+function buildOnlineGAME() {
+  window.GAME = {
+    isOnline: true,
+    get players() { return online.m.names; },
+    get scores() { return online.m.scores; },
+    get stats() { return online.m.stats; },
+    get totalCards() { return online.m.totalCards; },
+    get difficulty() { return online.m.difficulty; },
+    get played() { return online.m.qi; },
+    get myIndex() { return myIndex(); },
+    turn: -1,
+    jokers: null,
+    // Eşzamanlı modelde kullanılmayan ama motorun çağırabileceği kancalara
+    // güvenli karşılıklar (hata vermesin diye):
+    bonusMult: () => 1,
+    canPick: () => false,
+    canDuelAct: () => false,
+    ownsAdvance: () => false,
+    next() {},
+  };
+}
+
+// ---------- Deste (düello hariç; düello eşzamanlı modele uymuyor) ----------
+function buildOnlineDeck(n, diff) {
+  const cats = shuffle(Object.keys(CATEGORIES).filter((c) => c !== 'duello'));
+  const list = [];
+  for (let i = 0; i < n; i++) list.push(cats[i % cats.length]);
+  const catList = shuffle(list);
+  const pools = {};
+  const deck = catList.map((cat) => {
+    if (!pools[cat] || pools[cat].length === 0) pools[cat] = shuffle(poolFor(cat, diff));
+    return { cat, qIndex: pools[cat].pop(), bonus: false };
+  });
+  const bonusCount = n >= 16 ? 2 : 1;
+  shuffle(deck.map((_, i) => i)).slice(0, bonusCount).forEach((i) => { deck[i].bonus = true; });
+  return deck;
+}
+
+// Bir kartın görünümü: gövde HTML'i, şık metinleri ve doğru cevap metni.
+function simulView(card) {
+  const q = DATA[card.cat][card.qIndex];
+  const cat = card.cat;
+  let body, options, correct;
+  if (cat === 'bayrak') {
+    body = `<div class="q-flag">${q.flag}</div><p class="q-text" style="text-align:center">Bu bayrak hangi ülkenin?</p>`;
+    options = shuffle([q.answer, ...q.wrong]); correct = q.answer;
+  } else if (cat === 'dogruYanlis') {
+    body = `<p class="q-text">${q.statement}</p>`;
+    options = ['✅ Doğru', '❌ Yanlış']; correct = q.answer ? '✅ Doğru' : '❌ Yanlış';
+  } else if (cat === 'eski') {
+    body = `<p class="q-text">⏳ Hangisi daha önce oldu?</p>`;
+    options = shuffle([q.a.text, q.b.text]);
+    correct = (q.a.year <= q.b.year ? q.a : q.b).text;
+  } else {
+    body = `<p class="q-text">${q.question}</p>`;
+    options = shuffle([q.answer, ...q.wrong]); correct = q.answer;
+  }
+  return { q, cat, body, options, correct };
+}
+
+function withYear(card, text) {
+  const q = DATA[card.cat][card.qIndex];
+  if (card.cat !== 'eski') return text;
+  if (q.a.text === text) return `${text} — ${formatYear(q.a.year)}`;
+  if (q.b.text === text) return `${text} — ${formatYear(q.b.year)}`;
+  return text;
+}
+
+// ---------- Anlık güncelleme (snapshot) ----------
 function onRoomSnapshot(raw) {
   if (!raw) {
-    // Oda silindi (rakip ayrıldı / oyun bitti)
     if (online.code) {
       Net.stop();
       online.code = null;
+      clearOnlineTimers();
       if (!online.endedShown) {
         alert('Oda kapandı (rakip ayrılmış olabilir).');
         showScreen('screen-home');
@@ -234,86 +175,249 @@ function onRoomSnapshot(raw) {
   if (online.m.status === 'ended') {
     if (!online.endedShown) {
       online.endedShown = true;
+      clearOnlineTimers();
       showEndScreen(saveStats({ players: online.m.names, scores: online.m.scores, stats: online.m.stats }));
-      // Oyun bitti: kurucu odayı tamamen kapatır (açık oda kalmasın)
-      if (online.m.host === online.pid) {
+      if (isHost()) {
         try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(online.code))); } catch { /* önemsiz */ }
       }
     }
     return;
   }
 
-  // status: playing — oyuna girdik, eşleşme kuyruğu aboneliğini kapat
+  // status: playing — eşleşme kuyruğu aboneliğini kapat
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   if (!$('screen-game').classList.contains('active')) {
     setPlayersUI();
     showScreen('screen-game');
   }
   updateScoreboard();
-  renderBoard();
+  renderOnlineStrip();
 
-  const cur = online.m.current;
-  const phase = online.m.phase;
+  if (online.m.phase === 'answer') {
+    renderSimulQuestion();
+    hostMaybeReveal();
+  } else if (online.m.phase === 'reveal') {
+    renderSimulReveal();
+    hostMaybeAdvance();
+  }
+}
 
-  if (phase === 'pick') {
-    $('overlay').classList.add('hidden');
-    online.busy = false;
-    online.lastQKey = '';
-    online.lastFactKey = '';
-    updateBoardMsg();
-    // Kart seçimi yok: sıradaki oyuncu soruyu otomatik açar (DB'ye yazar),
-    // rakip anlık güncellemeyle görür.
-    if (window.GAME.canPick()) {
-      const next = online.m.played;
-      setTimeout(() => {
-        if (window.GAME.canPick() && online.m.phase === 'pick') window.GAME.onPick(next);
-      }, 550);
-    }
-    return;
+// ---------- Soru ekranı (cevaplama fazı) ----------
+function renderSimulQuestion() {
+  const m = online.m;
+  const card = m.deck[m.qi];
+  const mine = myIndex();
+  const myAns = m.answers[mine];
+  const key = `a${m.qi}-${myAns ? 1 : 0}`;
+
+  if (online.viewKey !== `view${m.qi}`) { online.view = simulView(card); online.viewKey = `view${m.qi}`; }
+  const v = online.view;
+
+  // Tam yeniden çizimi yalnızca soru ya da kendi cevap durumum değişince yap
+  if (online._drawnKey !== key) {
+    online._drawnKey = key;
+    $('overlay').classList.remove('hidden');
+    $('fact-panel').classList.add('hidden');
+    $('duel-box').classList.add('hidden');
+    $('q-spectate').classList.add('hidden');
+    $('joker-row').innerHTML = '';
+    $('q-category').textContent = `${CATEGORIES[card.cat].icon} ${CATEGORIES[card.cat].name}`;
+    $('bonus-banner').classList.toggle('hidden', !card.bonus);
+    $('q-player').textContent = '⚡ İkiniz de aynı anda cevaplıyorsunuz!';
+    $('q-player').className = 'q-player';
+    $('q-body').innerHTML = v.body;
+
+    const box = $('q-options');
+    box.className = card.cat === 'eski' ? 'stacked' : '';
+    box.innerHTML = '';
+    v.options.forEach((opt) => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn' + (card.cat === 'dogruYanlis' ? ' tf' : '') + (card.cat === 'eski' ? ' event' : '');
+      btn.textContent = opt;
+      if (myAns) {
+        btn.disabled = true;
+        if (opt === myAns.choice) btn.classList.add('mine-pick');
+      } else {
+        btn.addEventListener('click', () => submitSimul(opt, opt === v.correct));
+      }
+      box.appendChild(btn);
+    });
+    $('board-msg').innerHTML = myAns
+      ? 'Cevabın kaydedildi — rakip bekleniyor… ⏳'
+      : 'Hızlı ol! ⚡ Doğru + hızlı = bonus puan';
   }
 
-  if (phase === 'question') {
-    if (online.lastQKey !== `q${cur}`) {
-      online.lastQKey = `q${cur}`;
-      online.busy = false;
-      openCard();
-    }
-    return;
-  }
+  startSimulTimer();
+}
 
-  if (phase === 'duel') {
-    if (online.lastQKey !== `d${cur}`) {
-      online.lastQKey = `d${cur}`;
-      online.busy = false;
-      openCard(); // renderDuel + applyDuelState
+function submitSimul(choice, correct) {
+  const mine = myIndex();
+  if (mine < 0 || online.m.answers[mine]) return;
+  const ms = Math.max(0, Date.now() - (online.m.qStart || Date.now()));
+  Net.updateRoom(online.code, { [`answers/${mine}`]: { choice, correct, ms } }).catch(netErr);
+}
+
+function startSimulTimer() {
+  stopTimer();
+  $('timer-row').classList.remove('hidden');
+  const total = ANSWER_LIMIT;
+  const tick = () => {
+    if (!online.m || online.m.phase !== 'answer') { stopTimer(); return; }
+    const remain = Math.max(0, total - (Date.now() - online.m.qStart) / 1000);
+    renderTimer(remain, total);
+    if (remain <= 0) stopTimer();
+  };
+  tick();
+  timer.id = setInterval(tick, 100);
+}
+
+// Host: iki cevap geldi mi ya da süre doldu mu → açılışı yaz
+function hostMaybeReveal() {
+  const m = online.m;
+  if (!isHost() || m.phase !== 'answer') return;
+  const both = m.answers[0] && m.answers[1];
+  if (both) { doReveal(); return; }
+  const key = `ans-${m.qi}`;
+  if (online.timerKey === key) return;
+  online.timerKey = key;
+  if (online.hostTimer) clearTimeout(online.hostTimer);
+  const remain = Math.max(0, ANSWER_LIMIT * 1000 - (Date.now() - m.qStart));
+  online.hostTimer = setTimeout(doReveal, remain + 250);
+}
+
+function doReveal() {
+  const m = online.m;
+  if (!isHost() || m.phase !== 'answer') return;
+  if (online.hostTimer) { clearTimeout(online.hostTimer); online.hostTimer = null; }
+  online.timerKey = '';
+  const card = m.deck[m.qi];
+  const mult = card.bonus ? 2 : 1;
+  const scores = [...m.scores];
+  const gained = [0, 0];
+  const stats = clone(m.stats);
+  [0, 1].forEach((i) => {
+    const a = m.answers[i];
+    const ok = !!(a && a.correct);
+    recordStatO(stats[i], card.cat, ok);
+    if (ok) {
+      const ms = a.ms || ANSWER_LIMIT * 1000;
+      const speed = Math.round(SPEED_MAX * Math.max(0, 1 - ms / (ANSWER_LIMIT * 1000)));
+      gained[i] = (POINTS.normal + speed) * mult;
+      scores[i] += gained[i];
+    }
+  });
+  Net.updateRoom(online.code, { phase: 'reveal', scores, gained, stats, revealStart: Date.now() }).catch(netErr);
+}
+
+// ---------- Açılış ekranı (kim ne dedi + puanlar) ----------
+function renderSimulReveal() {
+  const m = online.m;
+  const card = m.deck[m.qi];
+  if (online.viewKey !== `view${m.qi}`) { online.view = simulView(card); online.viewKey = `view${m.qi}`; }
+  const v = online.view;
+  online._drawnKey = '';  // sonraki soruda taze çizim
+
+  stopTimer();
+  $('timer-row').classList.add('hidden');
+  $('overlay').classList.remove('hidden');
+  $('q-category').textContent = `${CATEGORIES[card.cat].icon} ${CATEGORIES[card.cat].name}`;
+  $('q-player').textContent = '';
+  $('q-body').innerHTML = v.body;
+
+  const a0 = m.answers[0], a1 = m.answers[1];
+  const box = $('q-options');
+  box.className = card.cat === 'eski' ? 'stacked' : '';
+  box.innerHTML = '';
+  v.options.forEach((opt) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn reveal' + (card.cat === 'dogruYanlis' ? ' tf' : '') + (card.cat === 'eski' ? ' event' : '');
+    btn.disabled = true;
+    if (opt === v.correct) btn.classList.add('correct');
+    let chips = '';
+    if (a0 && a0.choice === opt) chips += `<span class="pick-chip p1">${initials(m.names[0])}</span>`;
+    if (a1 && a1.choice === opt) chips += `<span class="pick-chip p2">${initials(m.names[1])}</span>`;
+    btn.innerHTML = `<span class="opt-label">${withYear(card, opt)}</span>${chips ? `<span class="pick-chips">${chips}</span>` : ''}`;
+    box.appendChild(btn);
+  });
+
+  const tag = (i) => {
+    const a = m.answers[i];
+    const mark = a ? (a.correct ? '✓' : '✗') : '⏳';
+    const pts = m.gained[i] > 0 ? ` +${m.gained[i]}` : '';
+    return `<span class="rv-name p${i + 1}">${m.names[i]}</span> ${mark}${pts}`;
+  };
+  $('fact-result').innerHTML = `${tag(0)} &nbsp;·&nbsp; ${tag(1)}`;
+  $('fact-result').className = '';
+  $('fact-text').textContent = v.q.fact || v.q.note || '';
+  $('fact-panel').classList.remove('hidden');
+  $('btn-next').classList.add('hidden');
+  $('next-wait').classList.remove('hidden');
+  $('board-msg').textContent = '';
+
+  startRevealCountdown();
+}
+
+function startRevealCountdown() {
+  if (online.revealIv) clearInterval(online.revealIv);
+  const upd = () => {
+    if (!online.m || online.m.phase !== 'reveal') { clearInterval(online.revealIv); online.revealIv = null; return; }
+    const elapsed = (Date.now() - (online.m.revealStart || Date.now())) / 1000;
+    const remain = Math.max(0, Math.ceil(REVEAL_HOLD - elapsed));
+    $('next-wait').textContent = `Sonraki soru: ${remain} ⏳`;
+    if (remain <= 0) { clearInterval(online.revealIv); online.revealIv = null; }
+  };
+  upd();
+  online.revealIv = setInterval(upd, 250);
+}
+
+// Host: açılış süresi dolunca sonraki soruya geç (ya da bitir)
+function hostMaybeAdvance() {
+  const m = online.m;
+  if (!isHost() || m.phase !== 'reveal') return;
+  const key = `rev-${m.qi}`;
+  if (online.timerKey === key) return;
+  online.timerKey = key;
+  if (online.hostTimer) clearTimeout(online.hostTimer);
+  const remain = Math.max(0, REVEAL_HOLD * 1000 - (Date.now() - m.revealStart));
+  online.hostTimer = setTimeout(() => {
+    const next = m.qi + 1;
+    if (next >= m.totalCards) {
+      Net.updateRoom(online.code, { status: 'ended' }).catch(netErr);
     } else {
-      online.busy = false;
-      applyDuelState();
+      Net.updateRoom(online.code, {
+        qi: next, phase: 'answer', answers: null, gained: [0, 0], revealStart: 0, qStart: Date.now(),
+      }).catch(netErr);
     }
-    return;
-  }
-
-  if (phase === 'fact') {
-    if (online.lastFactKey !== `f${cur}`) {
-      online.lastFactKey = `f${cur}`;
-      online.busy = false;
-      const f = online.m.fact || {};
-      // Rakip izleyiciyse, onun gördüğü şıkları sonuçla boya
-      if (myIndex() !== online.m.turn && f.answer) revealReadonly(f.answer, f.chosen);
-      showFact(f.resultText || '', f.isWin, f.factText || '');
-    }
-  }
+  }, remain + 100);
 }
 
-// ---------- Lobi ----------
-function genCode() {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 6 haneli
+// ---------- İlerleme şeridi ----------
+function renderOnlineStrip() {
+  const m = online.m;
+  const board = $('board');
+  board.className = 'prog-strip';
+  board.innerHTML = '';
+  m.deck.forEach((card, i) => {
+    const el = document.createElement('div');
+    let cls = 'prog-tile';
+    if (i < m.qi) cls += ' done';
+    else if (i === m.qi) cls += ' active';
+    el.className = cls;
+    el.innerHTML = `<span class="pt-icon">${CATEGORIES[card.cat].icon}</span>` +
+      (card.bonus ? '<span class="pt-bonus">⭐</span>' : '');
+    board.appendChild(el);
+  });
 }
+
+// ============================================================
+//  LOBİ — Arkadaşınla Oyna (oda kodu)
+// ============================================================
+function genCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
 async function createRoom() {
   const name = $('online-name').value.trim();
   if (!name) { lobbyMsg('Önce ismini yaz.'); return; }
-  if (!Net.isConfigured()) { lobbyMsg('⚠️ Firebase anahtarları girilmemiş — README\'deki kurulumu yap.'); return; }
+  if (!Net.isConfigured()) { lobbyMsg('⚠️ Firebase anahtarları girilmemiş.'); return; }
 
   lobbyMsg('Oda kuruluyor…');
   online.pid = getPid();
@@ -324,15 +428,11 @@ async function createRoom() {
     online.code = code;
     online.endedShown = false;
     await Net.createRoom(code, {
-      host: online.pid,
-      status: 'waiting',
-      totalCards: online.totalCards,
-      difficulty: online.difficulty,
-      names: { p0: name },
-      ids: { p0: online.pid },
-      turn: 0, played: 0, current: -1, phase: 'pick',
+      host: online.pid, status: 'waiting',
+      totalCards: online.totalCards, difficulty: online.difficulty,
+      names: { p0: name }, ids: { p0: online.pid },
+      qi: 0, phase: 'answer',
     });
-    // Host bağlantısı koparsa oda otomatik silinsin
     try {
       const { ref, onDisconnect } = Net.fns;
       onDisconnect(ref(Net.db, Net.roomPath(code))).remove();
@@ -347,7 +447,7 @@ async function joinRoom() {
   const code = $('join-code').value.trim();
   if (!name) { lobbyMsg('Önce ismini yaz.'); return; }
   if (!/^\d{6}$/.test(code)) { lobbyMsg('Oda kodu 6 haneli olmalı.'); return; }
-  if (!Net.isConfigured()) { lobbyMsg('⚠️ Firebase anahtarları girilmemiş — README\'deki kurulumu yap.'); return; }
+  if (!Net.isConfigured()) { lobbyMsg('⚠️ Firebase anahtarları girilmemiş.'); return; }
 
   lobbyMsg('Odaya katılınıyor…');
   online.pid = getPid();
@@ -366,23 +466,20 @@ async function joinRoom() {
 }
 
 function startOnlineGame() {
-  if (online.m.host !== online.pid) return;
+  if (!isHost()) return;
   if (!online.m.ids[1]) { lobbyMsg('Rakip henüz katılmadı.'); return; }
-  const deck = buildDeck(online.m.totalCards, online.m.difficulty);
+  const deck = buildOnlineDeck(online.m.totalCards, online.m.difficulty);
   Net.updateRoom(online.code, {
-    status: 'playing', phase: 'pick', turn: 0, played: 0, current: -1,
-    scores: [0, 0], deck,
-    jokers: [{ fifty: true, pass: true }, { fifty: true, pass: true }],
-    stats: [{}, {}], fact: null, duel: null,
+    status: 'playing', phase: 'answer', qi: 0, qStart: Date.now(),
+    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0, deck,
   }).catch(netErr);
 }
 
 function leaveOnline() {
   const code = online.code;
-  const wasHost = online.m && online.m.host === online.pid;
+  const wasHost = isHost();
   Net.stop();
-  // Oyun normal bittiyse (endedShown) oda zaten kapatıldı; tekrar yazıp
-  // hayalet oda oluşturma. Sadece oyun ortasında ayrılınca temizle.
+  clearOnlineTimers();
   if (code && !online.endedShown) {
     if (wasHost) {
       try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(code))); } catch { /* önemsiz */ }
@@ -396,19 +493,18 @@ function leaveOnline() {
 
 function resetOnlineState() {
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
+  clearOnlineTimers();
   online.code = null;
   online.m = null;
+  online.view = null;
+  online.viewKey = '';
+  online._drawnKey = '';
   online.endedShown = false;
-  online.busy = false;
-  online.lastQKey = '';
-  online.lastFactKey = '';
   online.matchmaking = false;
   online.claiming = false;
 }
 
-// Online ekranına her girişte lobiyi temiz başlat (eski oda kodu kalmasın)
 function enterOnline() {
-  // Açık bir odamız varsa (host'sak) kapatıp çık
   if (online.code) leaveOnline();
   resetOnlineState();
   syncDiffFrom('screen-online');
@@ -427,7 +523,7 @@ function renderLobbyRoom() {
   $('online-join-box').classList.add('hidden');
   $('online-room').classList.remove('hidden');
   $('room-code').textContent = online.code;
-  const isHost = online.m.host === online.pid;
+  const host = isHost();
 
   $('room-players').innerHTML = online.m.names
     .map((n, i) => {
@@ -441,9 +537,9 @@ function renderLobbyRoom() {
     .join('<div class="room-vs">VS</div>');
 
   const dd = DIFFICULTIES[online.m.difficulty] || DIFFICULTIES[1];
-  const info = `${dd.icon} ${dd.name}${dd.sub ? ` (${dd.sub})` : ''} · ${online.m.totalCards} kart`;
+  const info = `${dd.icon} ${dd.name}${dd.sub ? ` (${dd.sub})` : ''} · ${online.m.totalCards} soru`;
   const ready = !!online.m.ids[1];
-  if (isHost) {
+  if (host) {
     $('btn-online-start').classList.remove('hidden');
     $('btn-online-start').disabled = !ready;
     $('btn-online-start').textContent = ready ? '▶ Oyunu Başlat' : 'Rakip bekleniyor…';
@@ -456,10 +552,7 @@ function renderLobbyRoom() {
 
 // ============================================================
 //  HIZLI EŞLEŞME (rastgele rakip)
-//  Kuyruk: /matchmaking/{code} = { host, diff, ts }
-//  Bekleyen oyuncular burada listelenir; arayan biri kapar.
 // ============================================================
-
 function matchMsg(t) { $('match-msg').textContent = t || ''; }
 
 function showMatchSearching(status, sub) {
@@ -468,14 +561,12 @@ function showMatchSearching(status, sub) {
   $('match-status').textContent = status || 'Rakip aranıyor…';
   $('match-sub').textContent = sub || '';
 }
-
 function showMatchSetup() {
   $('match-searching').classList.add('hidden');
   $('match-setup').classList.remove('hidden');
 }
 
 function renderMatchWaiting() {
-  // Eşleşme modunda bekleme ekranı (oda kodu vb. gösterme)
   if (!$('screen-match').classList.contains('active')) showScreen('screen-match');
   const joined = online.m && online.m.ids[1];
   showMatchSearching(
@@ -484,16 +575,13 @@ function renderMatchWaiting() {
   );
 }
 
-// Bir bekleme odasını atomik olarak kap (transaction)
-// myDiffs verilirse kesişimi kontrol et ve oyunun zorluğunu kesişimden seç.
 async function tryClaim(code, name, myDiffs) {
   try {
     const res = await Net.claim(code, (room) => {
-      if (!room) return;                       // oda yok
-      if (room.status !== 'waiting') return;   // başlamış
-      if (room.ids && room.ids.p1) return;     // dolu
+      if (!room) return;
+      if (room.status !== 'waiting') return;
+      if (room.ids && room.ids.p1) return;
       if (myDiffs && myDiffs.length) {
-        // Hızlı Eşleşme: ev sahibi de bir küme tutuyor; kesişim boşsa eşleşme
         const hostDiffs = room.difficulties || [typeof room.difficulty === 'number' ? room.difficulty : 1];
         const inter = myDiffs.filter((d) => hostDiffs.includes(d));
         if (inter.length === 0) return;
@@ -510,33 +598,27 @@ async function tryClaim(code, name, myDiffs) {
   } catch (e) { return false; }
 }
 
-// Kapılan odada oyunu başlat (deste kur + playing) — kapan oyuncu yapar
 async function startClaimedGame(code) {
   online.code = code;
   online.matchmaking = true;
   online.endedShown = false;
-  online.busy = false;
   await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
   const room = await Net.getRoom(code);
   const diff = typeof room?.difficulty === 'number' ? room.difficulty : 1;
-  const deck = buildDeck(room?.totalCards || 10, diff);
+  const deck = buildOnlineDeck(room?.totalCards || 15, diff);
   await Net.updateRoom(code, {
-    status: 'playing', phase: 'pick', turn: 0, played: 0, current: -1,
-    scores: [0, 0], deck,
-    jokers: [{ fifty: true, pass: true }, { fifty: true, pass: true }],
-    stats: [{}, {}], fact: null, duel: null,
+    status: 'playing', phase: 'answer', qi: 0, qStart: Date.now(),
+    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0, deck,
   });
   Net.subscribe(code, onRoomSnapshot);
   buildOnlineGAME();
 }
 
 function queueDiffs(entry) {
-  // Geriye dönük uyum: eski entry'lerde diff (tek sayı) vardı
   if (entry.diffs && entry.diffs.length) return entry.diffs;
   if (typeof entry.diff === 'number') return [entry.diff];
   return [];
 }
-
 function diffsLabel(arr) {
   return arr.map((d) => `${DIFFICULTIES[d].icon} ${DIFFICULTIES[d].name}`).join(', ');
 }
@@ -545,7 +627,7 @@ async function quickMatch() {
   const name = $('match-name').value.trim();
   if (!name) { matchMsg('Önce ismini yaz.'); return; }
   if (!online.difficulties.length) online.difficulties = [1];
-  if (!Net.isConfigured()) { matchMsg('⚠️ Firebase anahtarları girilmemiş — README\'deki kurulumu yap.'); return; }
+  if (!Net.isConfigured()) { matchMsg('⚠️ Firebase anahtarları girilmemiş.'); return; }
 
   online.pid = getPid();
   online.matchmaking = true;
@@ -554,7 +636,6 @@ async function quickMatch() {
 
   try {
     await Net.init();
-    // 1) Kuyruğu oku, kabul ettiğin zorluklarla KESİŞEN birini kapmayı dene
     const queue = (await Net.getPath('matchmaking')) || {};
     const myDiffs = [...online.difficulties];
     const candidates = Object.keys(queue).filter((c) => {
@@ -564,10 +645,8 @@ async function quickMatch() {
     });
     for (const code of shuffle(candidates)) {
       if (await tryClaim(code, name, myDiffs)) { await startClaimedGame(code); return; }
-      // kapılamadıysa (oda gitmiş olabilir) kuyruktan temizle
       await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
     }
-    // 2) Kimse yok → kendi bekleme odanı kur ve bekle
     await createWaitingMatchRoom(name);
   } catch (e) { netErr(e); showMatchSetup(); }
 }
@@ -579,15 +658,11 @@ async function createWaitingMatchRoom(name) {
   const diffs = [...online.difficulties];
   await Net.createRoom(code, {
     host: online.pid, status: 'waiting',
-    // Geçici zorluk: kapan kişi bunu kesişimden seçtiğinde günceller
-    difficulty: diffs[0],
-    difficulties: diffs,
-    totalCards: 15,
+    difficulty: diffs[0], difficulties: diffs, totalCards: 15,
     names: { p0: name }, ids: { p0: online.pid },
-    turn: 0, played: 0, current: -1, phase: 'pick',
+    qi: 0, phase: 'answer',
   });
   await Net.setPath(`matchmaking/${code}`, { host: online.pid, diffs, ts: Date.now() });
-  // Bağlantı koparsa hem odayı hem kuyruk kaydını temizle
   try {
     const { ref, onDisconnect } = Net.fns;
     onDisconnect(ref(Net.db, Net.roomPath(code))).remove();
@@ -598,15 +673,12 @@ async function createWaitingMatchRoom(name) {
   watchQueueWhileWaiting(name);
 }
 
-// İki kişi aynı anda oda kurarsa ikisi de beklemesin: kuyruğu dinle,
-// pid karşılaştırmasıyla (yalnızca büyük pid kapar) tek taraf eşleştirsin.
 function watchQueueWhileWaiting(name) {
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
     if (!online.matchmaking || !online.code || online.claiming) return;
     queue = queue || {};
     const myDiffs = [...online.difficulties];
-    // Pid-tiebreak (yarış önlemi) + zorluk kesişimi
     const cands = Object.keys(queue).filter((c) => {
       if (c === online.code) return false;
       const e = queue[c];
@@ -640,8 +712,7 @@ async function teardownMyWaitingRoom() {
 }
 
 function cancelMatch() {
-  // Beklerken iptal: odamı ve kuyruk kaydımı temizle
-  if (online.code && !online.endedShown && online.m && online.m.host === online.pid) {
+  if (online.code && !online.endedShown && isHost()) {
     teardownMyWaitingRoom();
   } else {
     Net.stop();
@@ -655,7 +726,6 @@ function syncDiffFrom(screenId) {
   const sel = document.querySelector(`#${screenId} .diff-btn.selected`);
   if (sel) online.difficulty = parseInt(sel.dataset.diff, 10);
 }
-
 function syncMatchDiffs() {
   const arr = [...document.querySelectorAll('#match-diffs .diff-btn.selected')]
     .map((b) => parseInt(b.dataset.diff, 10));
@@ -705,7 +775,6 @@ $('match-name').addEventListener('input', () => {
 document.querySelectorAll('#match-diffs .diff-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     btn.classList.toggle('selected');
-    // En az bir zorluk seçili kalsın
     const stillSelected = document.querySelectorAll('#match-diffs .diff-btn.selected');
     if (stillSelected.length === 0) btn.classList.add('selected');
     syncMatchDiffs();

@@ -55,7 +55,7 @@ function buildLocalGAME() {
         local.duel = { found: [], writer: local.turn, over: false };
       }
       renderBoard();
-      setTimeout(() => openCard(), 500);
+      setTimeout(() => openCard(), 750);
     },
 
     commitSolo(result) {
@@ -129,14 +129,7 @@ function advanceLocal() {
     renderBoard();
     updateScoreboard();
     updateBoardMsg();
-    autoNextLocal();
   }
-}
-
-// Kart seçimi yok: sıradaki soruyu otomatik aç.
-function autoNextLocal() {
-  local.picking = false;
-  window.GAME.onPick(local.played);
 }
 
 // ---------- Kalıcı istatistik (localStorage) ----------
@@ -181,7 +174,6 @@ function startLocalGame() {
   renderBoard();
   updateScoreboard();
   updateBoardMsg();
-  autoNextLocal();
 }
 
 document.querySelectorAll('#screen-setup .round-btn').forEach((btn) => {
