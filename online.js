@@ -154,6 +154,11 @@ function handleLeavingState() {
     return;
   }
   // Rakip ayrılmış → 15 sn geri sayım.
+  // Faz geçişlerini de durdur: askıdaki hostTimer / reveal interval bu sırada
+  // ateşlemesin, yoksa oda durumu grace altında ilerler.
+  if (online.hostTimer) { clearTimeout(online.hostTimer); online.hostTimer = null; }
+  if (online.revealIv) { clearInterval(online.revealIv); online.revealIv = null; }
+  online.timerKey = '';
   const key = `leaving-${leaving.ts}`;
   if (online.graceKey === key) return; // zaten kurulu
   clearGraceTimers();
