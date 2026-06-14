@@ -190,6 +190,7 @@ function setPlayersUI() {
 function renderBoard() {
   const G = window.GAME;
   const board = $('board');
+  board.className = '';   // önceki online şerit / başka modda kalmış sınıfları temizle
   board.innerHTML = '';
 
   G.deck.forEach((card, i) => {
