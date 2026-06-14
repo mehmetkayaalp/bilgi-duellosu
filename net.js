@@ -49,7 +49,11 @@ const Net = {
   // Bir yolu canlı dinle; aboneliği kapatan fonksiyonu döndürür
   subscribePath(path, cb) {
     const { ref, onValue } = this.fns;
-    return onValue(ref(this.db, path), (snap) => cb(snap.exists() ? snap.val() : null));
+    return onValue(
+      ref(this.db, path),
+      (snap) => cb(snap.exists() ? snap.val() : null),
+      (err) => { console.error(`[Net] ${path} dinleme hatası:`, err); }
+    );
   },
 
   // Atomik talep (iki kişi aynı odayı kapamasın diye)

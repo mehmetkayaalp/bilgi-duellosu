@@ -246,8 +246,7 @@ const DATA = {
     { question: 'Galatasaray hangi yıl UEFA Kupası\'nı kazandı?', answer: '2000', wrong: ['1998', '2002', '2008'], fact: '17 Mayıs 2000\'de Kopenhag\'da Arsenal\'i penaltılarla yenerek kazandı; bir Türk takımının ilk Avrupa kupasıdır.', d: 1 },
     { question: '1903 yılında kurulan, Türkiye\'nin en eski spor kulüplerinden biri olan takım hangisidir?', answer: 'Beşiktaş', wrong: ['Galatasaray', 'Fenerbahçe', 'Trabzonspor'], fact: 'Beşiktaş 19 Mart 1903\'te kuruldu; Galatasaray 1905, Fenerbahçe 1907\'dedir.', d: 1 },
 
-    // ---- Doğru/Yanlış havasında olanlar Kolay'a ----
-    { question: 'Süper Lig\'de bugüne kadar sadece İstanbul takımları şampiyon olmuştur. Doğru mu, yanlış mı?', answer: 'Yanlış', wrong: ['Doğru', 'Kısmen', 'Bilinmiyor'], fact: 'Trabzonspor, Bursaspor ve Başakşehir gibi İstanbul dışı takımlar da şampiyon olmuştur.', d: 1 },
+    { question: 'Süper Lig\'i kazanan İstanbul dışındaki ilk takım hangisidir?', answer: 'Trabzonspor', wrong: ['Bursaspor', 'Eskişehirspor', 'Ankaragücü'], fact: 'Trabzonspor 1975-76\'da İstanbul dışından gelen ilk şampiyon oldu ve toplam 6 kez şampiyonluk kazandı.', d: 1 },
 
     // ---- Orta (d: 2) ----
     { question: 'Türkiye 2002 FIFA Dünya Kupası\'nda kaçıncı olmuştur?', answer: 'Üçüncü', wrong: ['Birinci', 'İkinci', 'Dördüncü'], fact: 'Türkiye, 2002 Güney Kore-Japonya organizasyonunda tarihindeki en iyi sonucu alarak 3. oldu.', d: 2 },

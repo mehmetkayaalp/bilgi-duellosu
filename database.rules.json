@@ -6,6 +6,13 @@
         ".write": true,
         ".validate": "$code.matches(/^[0-9]{6}$/)"
       }
+    },
+    "matchmaking": {
+      ".read": true,
+      "$code": {
+        ".write": true,
+        ".validate": "$code.matches(/^[0-9]{6}$/)"
+      }
     }
   }
 }

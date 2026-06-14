@@ -744,11 +744,14 @@ function watchQueueWhileWaiting(name) {
   online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
     if (!online.matchmaking || !online.code || online.claiming) return;
     queue = queue || {};
+    const others = Object.keys(queue).filter((c) => c !== online.code && queue[c] && queue[c].host);
+    const sub = $('match-sub');
+    if (sub) sub.textContent = others.length
+      ? `Kuyrukta ${others.length + 1} kişi · uygun zorluk aranıyor…`
+      : 'Şu an başka bekleyen yok. İlk gelene eşleşeceksin.';
     const myDiffs = [...online.difficulties];
-    const cands = Object.keys(queue).filter((c) => {
-      if (c === online.code) return false;
+    const cands = others.filter((c) => {
       const e = queue[c];
-      if (!e || !e.host) return false;
       if (e.host >= online.pid) return false;
       return queueDiffs(e).some((d) => myDiffs.includes(d));
     });
