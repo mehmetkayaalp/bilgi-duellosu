@@ -53,6 +53,8 @@ function normalizeRoom(r) {
     answers: r.answers || {},     // {0:{choice,correct,ms}, 1:{...}}
     gained: r.gained || [0, 0],
     revealStart: r.revealStart || 0,
+    used: r.used || [],          // önceki oyunlarda kullanılmış soru anahtarları
+    rematch: r.rematch || {},    // {0:true,1:true} → rövanş istekleri
     host: r.host,
   };
 }
@@ -104,20 +106,28 @@ function buildOnlineGAME() {
 }
 
 // ---------- Deste (düello hariç; düello eşzamanlı modele uymuyor) ----------
-function buildOnlineDeck(n, diff) {
+// exclude: önceki oyunların soru anahtarları ("cat:idx") — tekrar gelmesinler.
+function buildOnlineDeck(n, diff, exclude) {
+  exclude = exclude || new Set();
   const cats = shuffle(Object.keys(CATEGORIES).filter((c) => c !== 'duello'));
   const list = [];
   for (let i = 0; i < n; i++) list.push(cats[i % cats.length]);
   const catList = shuffle(list);
   const pools = {};
   const deck = catList.map((cat) => {
-    if (!pools[cat] || pools[cat].length === 0) pools[cat] = shuffle(poolFor(cat, diff));
+    if (!pools[cat] || pools[cat].length === 0) {
+      let p = shuffle(poolFor(cat, diff)).filter((idx) => !exclude.has(`${cat}:${idx}`));
+      if (p.length === 0) p = shuffle(poolFor(cat, diff)); // havuz tükendi → tekrara izin ver
+      pools[cat] = p;
+    }
     return { cat, qIndex: pools[cat].pop(), bonus: false };
   });
   const bonusCount = n >= 16 ? 2 : 1;
   shuffle(deck.map((_, i) => i)).slice(0, bonusCount).forEach((i) => { deck[i].bonus = true; });
   return deck;
 }
+
+function deckKeys(deck) { return deck.map((c) => `${c.cat}:${c.qIndex}`); }
 
 // Bir kartın görünümü: gövde HTML'i, şık metinleri ve doğru cevap metni.
 function simulView(card) {
@@ -177,14 +187,16 @@ function onRoomSnapshot(raw) {
       online.endedShown = true;
       clearOnlineTimers();
       showEndScreen(saveStats({ players: online.m.names, scores: online.m.scores, stats: online.m.stats }));
-      if (isHost()) {
-        try { const { ref, remove } = Net.fns; remove(ref(Net.db, Net.roomPath(online.code))); } catch { /* önemsiz */ }
-      }
+      // Oda KAPATILMIYOR: rövanş için açık kalır. Ayrılınca (leaveOnline)
+      // ya da host bağlantısı kopunca (onDisconnect) temizlenir.
     }
+    handleRematchState();
     return;
   }
 
-  // status: playing — eşleşme kuyruğu aboneliğini kapat
+  // status: playing — eşleşme kuyruğu aboneliğini kapat, bitiş bayrağını sıfırla
+  online.endedShown = false;
+  online._rematching = false;
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   if (!$('screen-game').classList.contains('active')) {
     setPlayersUI();
@@ -253,6 +265,7 @@ function renderSimulQuestion() {
 function submitSimul(choice, correct) {
   const mine = myIndex();
   if (mine < 0 || online.m.answers[mine]) return;
+  sfx.tap();
   const ms = Math.max(0, Date.now() - (online.m.qStart || Date.now()));
   Net.updateRoom(online.code, { [`answers/${mine}`]: { choice, correct, ms } }).catch(netErr);
 }
@@ -354,6 +367,13 @@ function renderSimulReveal() {
   $('next-wait').classList.remove('hidden');
   $('board-msg').textContent = '';
 
+  // Soru başına bir kez doğru/yanlış sesi (kendi cevabıma göre)
+  if (online._soundKey !== `s${m.qi}`) {
+    online._soundKey = `s${m.qi}`;
+    const a = m.answers[myIndex()];
+    sfx[(a && a.correct) ? 'correct' : 'wrong']();
+  }
+
   startRevealCountdown();
 }
 
@@ -407,6 +427,49 @@ function renderOnlineStrip() {
       (card.bonus ? '<span class="pt-bonus">⭐</span>' : '');
     board.appendChild(el);
   });
+}
+
+// ---------- Rövanş (aynı odada yeni oyun; önceki sorular elenir) ----------
+function handleRematchState() {
+  const r = online.m.rematch || {};
+  const me = myIndex();
+  if (me < 0) return;
+  const iReq = !!r[me], oppReq = !!r[1 - me];
+  const btn = $('btn-rematch'), st = $('rematch-status');
+  btn.classList.remove('hidden');
+  if (iReq) {
+    btn.disabled = true;
+    btn.innerHTML = '🔁 &nbsp;Rövanş istedin';
+    st.textContent = oppReq ? 'Yeni oyun başlıyor… 🎮' : 'Rakip bekleniyor… ⏳';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = oppReq ? '🔁 &nbsp;Rakip rövanş istiyor — kabul et!' : '🔁 &nbsp;Rövanş';
+    st.textContent = oppReq ? 'Rakip rövanş istiyor 🔥' : '';
+  }
+  // Host hakem: ikisi de istediyse yeni oyunu kurar (tek sefer)
+  if (isHost() && r[0] && r[1] && !online._rematching) {
+    online._rematching = true;
+    startRematch();
+  }
+}
+
+function requestRematch() {
+  const me = myIndex();
+  if (me < 0 || (online.m.rematch && online.m.rematch[me])) return;
+  sfx.tap();
+  Net.updateRoom(online.code, { [`rematch/${me}`]: true }).catch(netErr);
+}
+
+function startRematch() {
+  if (!isHost()) return;
+  const prev = online.m.used || [];
+  const deck = buildOnlineDeck(online.m.totalCards, online.m.difficulty, new Set(prev));
+  const used = [...prev, ...deckKeys(deck)];
+  Net.updateRoom(online.code, {
+    status: 'playing', phase: 'answer', qi: 0, qStart: Date.now(),
+    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0,
+    deck, used, rematch: null,
+  }).catch(netErr);
 }
 
 // ============================================================
@@ -471,7 +534,8 @@ function startOnlineGame() {
   const deck = buildOnlineDeck(online.m.totalCards, online.m.difficulty);
   Net.updateRoom(online.code, {
     status: 'playing', phase: 'answer', qi: 0, qStart: Date.now(),
-    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0, deck,
+    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0,
+    deck, used: deckKeys(deck), rematch: null,
   }).catch(netErr);
 }
 
@@ -499,6 +563,7 @@ function resetOnlineState() {
   online.view = null;
   online.viewKey = '';
   online._drawnKey = '';
+  online._soundKey = '';
   online.endedShown = false;
   online.matchmaking = false;
   online.claiming = false;
@@ -608,7 +673,8 @@ async function startClaimedGame(code) {
   const deck = buildOnlineDeck(room?.totalCards || 15, diff);
   await Net.updateRoom(code, {
     status: 'playing', phase: 'answer', qi: 0, qStart: Date.now(),
-    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0, deck,
+    scores: [0, 0], gained: [0, 0], stats: [{}, {}], answers: null, revealStart: 0,
+    deck, used: deckKeys(deck), rematch: null,
   });
   Net.subscribe(code, onRoomSnapshot);
   buildOnlineGAME();
@@ -766,6 +832,7 @@ $('btn-create').addEventListener('click', createRoom);
 $('btn-join').addEventListener('click', joinRoom);
 $('btn-online-start').addEventListener('click', startOnlineGame);
 $('btn-online-leave').addEventListener('click', leaveOnline);
+$('btn-rematch').addEventListener('click', () => { if (online.code && window.GAME && window.GAME.isOnline) requestRematch(); });
 
 // ---------- Hızlı Eşleşme ekranı olayları ----------
 $('match-name').addEventListener('input', () => {

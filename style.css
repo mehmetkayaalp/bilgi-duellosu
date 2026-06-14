@@ -336,6 +336,33 @@ body {
 }
 .big-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 16px 34px rgba(255, 159, 67, 0.45); }
 .big-btn:active { transform: scale(0.98); }
+.big-btn:disabled { opacity: 0.6; cursor: default; transform: none; box-shadow: none; }
+.big-btn.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  box-shadow: none;
+  margin-top: 12px;
+}
+.big-btn.ghost:hover { background: rgba(255, 255, 255, 0.14); box-shadow: none; }
+
+.rematch-status { margin: 12px 0 4px; font-size: 0.9rem; opacity: 0.8; min-height: 1.2em; font-weight: 600; }
+
+.mute-btn {
+  position: fixed;
+  top: 12px; right: 12px;
+  z-index: 50;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 1.15rem;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: transform 0.15s, background 0.2s;
+}
+.mute-btn:hover { transform: scale(1.08); background: rgba(0, 0, 0, 0.45); }
+.mute-btn:active { transform: scale(0.94); }
 
 .setup-hint {
   margin-top: 22px;

@@ -12,6 +12,34 @@ const TIME_LIMIT = 20;        // şıklı sorular için saniye
 const DUEL_TIME_LIMIT = 30;   // "Yaz Bakalım" için daha uzun süre
 const FAST_LIMIT = 10;        // bu süreden hızlı cevaplayana bonus
 
+// ---------- Ses efektleri (Web Audio — dosya yok, çevrimdışı çalışır) ----------
+const sfx = {
+  ctx: null,
+  on: localStorage.getItem('bd-muted') !== '1',
+  ac() {
+    if (!this.ctx) { try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    return this.ctx;
+  },
+  blip(freq, dur, type = 'sine', when = 0, gain = 0.18) {
+    if (!this.on) return;
+    const ac = this.ac(); if (!ac) return;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.connect(g); g.connect(ac.destination);
+    const t = ac.currentTime + when;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.02);
+  },
+  correct() { this.blip(660, 0.12, 'triangle', 0, 0.2); this.blip(880, 0.18, 'triangle', 0.1, 0.2); },
+  wrong() { this.blip(220, 0.18, 'sawtooth', 0, 0.14); this.blip(160, 0.28, 'sawtooth', 0.12, 0.14); },
+  tap() { this.blip(520, 0.06, 'sine', 0, 0.1); },
+  win() { [523, 659, 784, 1047].forEach((f, i) => this.blip(f, 0.24, 'triangle', i * 0.13, 0.2)); },
+  toggle() { this.on = !this.on; localStorage.setItem('bd-muted', this.on ? '0' : '1'); },
+};
+
 // ---------- Saf yardımcılar ----------
 function shuffle(arr) {
   const a = [...arr];
@@ -294,6 +322,7 @@ function revealReadonly(answer, chosen) {
 // ---------- Puanlama (motor hesaplar, controller işler) ----------
 function settleSolo(correct, cat, q, resultText, answer, chosen) {
   stopTimer();
+  sfx[correct ? 'correct' : 'wrong']();
   const G = window.GAME;
   const m = G.bonusMult();
   let points = 0, fast = false, msg = resultText;
@@ -581,8 +610,12 @@ function showEndScreen(allStats) {
     })
     .join('');
 
+  // Rövanş arayüzü varsayılan gizli; online denetleyici gerekirse gösterir
+  $('btn-rematch').classList.add('hidden');
+  $('rematch-status').textContent = '';
+
   showScreen('screen-end');
-  if (!tie) launchConfetti();
+  if (!tie) { launchConfetti(); sfx.win(); } else { sfx.tap(); }
 }
 
 function launchConfetti() {
@@ -615,4 +648,12 @@ $('duel-joker-pass').addEventListener('click', () => {
 $('btn-next').addEventListener('click', () => {
   const G = window.GAME;
   if (G.ownsAdvance()) G.next();
+});
+
+// Ses aç/kapa
+$('btn-mute').textContent = sfx.on ? '🔊' : '🔇';
+$('btn-mute').addEventListener('click', () => {
+  sfx.toggle();
+  $('btn-mute').textContent = sfx.on ? '🔊' : '🔇';
+  if (sfx.on) sfx.tap();
 });

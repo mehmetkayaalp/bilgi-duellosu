@@ -17,6 +17,7 @@
 <body>
   <div class="bg-glow glow-1"></div>
   <div class="bg-glow glow-2"></div>
+  <button id="btn-mute" class="mute-btn" aria-label="Sesi aç/kapa">🔊</button>
 
   <!-- ======== ANA MENÜ (mod seçimi) ======== -->
   <section id="screen-home" class="screen active">
@@ -257,7 +258,9 @@
       <div id="end-emoji" class="end-emoji">🏆</div>
       <h1 id="end-title">Kazanan!</h1>
       <div class="final-scores" id="final-scores"></div>
-      <button id="btn-restart" class="big-btn">↺ &nbsp;Ana Menü</button>
+      <button id="btn-rematch" class="big-btn hidden">🔁 &nbsp;Rövanş</button>
+      <p id="rematch-status" class="rematch-status"></p>
+      <button id="btn-restart" class="big-btn ghost">↺ &nbsp;Ana Menü</button>
     </div>
   </section>
 
