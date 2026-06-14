@@ -104,6 +104,13 @@ function buildLocalGAME() {
     },
 
     next() { advanceLocal(); },
+
+    quit() {
+      if (!confirm('Oyundan çıkmak istediğine emin misin? Skor kaydedilmeyecek.')) return;
+      $('overlay').classList.add('hidden');
+      stopTimer();
+      showScreen('screen-home');
+    },
   };
 }
 

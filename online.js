@@ -9,6 +9,7 @@
 const ANSWER_LIMIT = 15;  // saniye: her soru için cevaplama süresi
 const REVEAL_HOLD = 6;    // saniye: "doğru cevap + kim ne dedi" ekranı süresi
 const SPEED_MAX = 8;      // doğru + hızlı cevaba verilen en fazla bonus
+const GRACE_MS = 15000;   // pes etme / bağlantı kopması bekleme süresi
 
 const online = {
   code: null,
@@ -26,6 +27,10 @@ const online = {
   hostTimer: null,      // host'un faz geçiş zamanlayıcısı
   timerKey: '',         // aynı faz için tek zamanlayıcı
   revealIv: null,       // açılış geri sayım arayüzü
+  graceIv: null,        // pes/koparma geri sayım arayüzü
+  graceTimeout: null,   // 15 sn sonra forfeit yazımı
+  graceKey: '',         // aynı leaving olayı için tek zamanlayıcı
+  quitting: false,      // pes ettiğimizi belirten lokal bayrak
 };
 
 function getPid() {
@@ -55,6 +60,8 @@ function normalizeRoom(r) {
     revealStart: r.revealStart || 0,
     used: r.used || [],          // önceki oyunlarda kullanılmış soru anahtarları
     rematch: r.rematch || {},    // {0:true,1:true} → rövanş istekleri
+    leaving: r.leaving || null,  // {pid,idx,ts,kind:'quit'|'dc'} — ayrılan oyuncu
+    forfeit: r.forfeit || null,  // bitişte kim pes etti: {pid,idx,kind}
     host: r.host,
   };
 }
@@ -79,7 +86,109 @@ function netErr(e) {
 function clearOnlineTimers() {
   if (online.hostTimer) { clearTimeout(online.hostTimer); online.hostTimer = null; }
   if (online.revealIv) { clearInterval(online.revealIv); online.revealIv = null; }
+  clearGraceTimers();
   online.timerKey = '';
+}
+
+function clearGraceTimers() {
+  if (online.graceIv) { clearInterval(online.graceIv); online.graceIv = null; }
+  if (online.graceTimeout) { clearTimeout(online.graceTimeout); online.graceTimeout = null; }
+  online.graceKey = '';
+}
+
+// Oyun sırasında bağlantı kopması durumunda otomatik 'leaving' işaretini koyar.
+// Her sefer çağrıldığında yeniden kurar (bir kez tetiklendikten sonra sunucu
+// tarafında silindiği için).
+function setupLeavingOnDisconnect(idx) {
+  if (!Net.fns || !online.code || idx < 0) return;
+  try {
+    const { ref, onDisconnect } = Net.fns;
+    onDisconnect(ref(Net.db, `${Net.roomPath(online.code)}/leaving`))
+      .set({ pid: online.pid, idx, ts: Date.now(), kind: 'dc' });
+  } catch (e) { console.warn('onDisconnect leaving kaydı başarısız:', e); }
+}
+
+// Oyun sırasında "Çık" butonuna basıldığında.
+async function quitOnline() {
+  const m = online.m;
+  const code = online.code;
+  // Lobi veya bitmiş ekranda → klasik ayrılma (oda kapanır / status:ended).
+  if (!code || !m || m.status !== 'playing') {
+    if (!confirm('Ana menüye dönmek istediğine emin misin?')) return;
+    leaveOnline();
+    return;
+  }
+  if (online.quitting) return;
+  if (!confirm('Pes etmek istediğine emin misin? Rakibin 15 sn içinde galip ilan edilecek.')) return;
+  online.quitting = true;
+  const idx = myIndex();
+  try {
+    if (idx >= 0) {
+      await Net.updateRoom(code, {
+        leaving: { pid: online.pid, idx, ts: Date.now(), kind: 'quit' },
+      });
+    }
+  } catch (e) { console.warn('Pes etme yazımı başarısız:', e); }
+  // Odayı silmeden ayrıl — kalan oyuncu süreyi bitirip forfeit yazacak.
+  Net.stop();
+  clearOnlineTimers();
+  resetOnlineState();
+  online.quitting = false;
+  showScreen('screen-home');
+}
+
+// onRoomSnapshot her tetiklendiğinde, oda 'playing' iken çağrılır.
+// `leaving` alanına göre grace overlay'ini kurar/yıkar.
+function handleLeavingState() {
+  const m = online.m;
+  const leaving = m && m.leaving;
+  if (!leaving) {
+    clearGraceTimers();
+    hideGraceOverlay();
+    return;
+  }
+  // Bayrak bizimse → tekrar bağlandık, sil ve onDisconnect'i yeniden kur.
+  if (leaving.pid === online.pid) {
+    Net.updateRoom(online.code, { leaving: null }).catch(() => {});
+    setupLeavingOnDisconnect(myIndex());
+    return;
+  }
+  // Rakip ayrılmış → 15 sn geri sayım.
+  const key = `leaving-${leaving.ts}`;
+  if (online.graceKey === key) return; // zaten kurulu
+  clearGraceTimers();
+  online.graceKey = key;
+  const oppName = m.names[leaving.idx] || 'Rakibin';
+  const title = leaving.kind === 'quit' ? `${oppName} pes etti` : `${oppName} ayrıldı`;
+  const msg = leaving.kind === 'quit'
+    ? 'Süre dolarsa galibiyet senin.'
+    : 'Bağlantı kopmuş olabilir, geri dönmesi bekleniyor…';
+  const startedAt = leaving.ts;
+  const tick = () => {
+    if (!online.m || !online.m.leaving) {
+      clearGraceTimers();
+      hideGraceOverlay();
+      return;
+    }
+    const remain = Math.ceil((GRACE_MS - (Date.now() - startedAt)) / 1000);
+    updateGraceCount(remain);
+    if (remain <= 0) {
+      clearGraceTimers();
+      Net.updateRoom(online.code, {
+        status: 'ended',
+        forfeit: { pid: leaving.pid, idx: leaving.idx, kind: leaving.kind },
+        leaving: null,
+      }).catch(() => {});
+    }
+  };
+  const initialRemain = Math.ceil((GRACE_MS - (Date.now() - startedAt)) / 1000);
+  showGraceOverlay({
+    title,
+    msg,
+    sub: 'Süre dolarsa galibiyet senin!',
+    seconds: Math.max(0, initialRemain),
+  });
+  online.graceIv = setInterval(tick, 250);
 }
 
 // ---------- window.GAME (online) — motorun ortak fonksiyonları için ----------
@@ -102,6 +211,12 @@ function buildOnlineGAME() {
     canDuelAct: () => false,
     ownsAdvance: () => false,
     next() {},
+    quit() { quitOnline(); },
+    forfeit() {
+      const ff = online.m && online.m.forfeit;
+      if (!ff) return null;
+      return { loserIdx: ff.idx, mineLost: ff.pid === online.pid, kind: ff.kind };
+    },
   };
 }
 
@@ -202,8 +317,27 @@ function onRoomSnapshot(raw) {
     setPlayersUI();
     showScreen('screen-game');
   }
+  // Oyuna ilk girişte:
+  //   - Bekleme aşamasında oda kapatan onDisconnect'leri iptal et (kapatma yerine
+  //     15 sn grace istiyoruz).
+  //   - Bağlantı kopması durumunda 'leaving' işareti koyacak yeni onDisconnect kur.
+  if (!online._dcRegistered && myIndex() >= 0) {
+    try {
+      const { ref, onDisconnect } = Net.fns;
+      onDisconnect(ref(Net.db, Net.roomPath(online.code))).cancel();
+      onDisconnect(ref(Net.db, `matchmaking/${online.code}`)).cancel();
+    } catch { /* önemsiz */ }
+    setupLeavingOnDisconnect(myIndex());
+    online._dcRegistered = true;
+  }
   updateScoreboard();
   renderOnlineStrip();
+  handleLeavingState();
+
+  // Grace devam ediyorken host faz geçişlerini erteler.
+  if (online.m.leaving && online.m.leaving.pid !== online.pid) {
+    return;
+  }
 
   if (online.m.phase === 'answer') {
     renderSimulQuestion();
@@ -434,8 +568,14 @@ function handleRematchState() {
   const r = online.m.rematch || {};
   const me = myIndex();
   if (me < 0) return;
-  const iReq = !!r[me], oppReq = !!r[1 - me];
   const btn = $('btn-rematch'), st = $('rematch-status');
+  // Forfeit (pes etme / bağlantı kopması) ile bitmişse rövanş gösterme
+  if (online.m.forfeit) {
+    btn.classList.add('hidden');
+    st.textContent = 'Rakibin ayrıldığı için rövanş yok.';
+    return;
+  }
+  const iReq = !!r[me], oppReq = !!r[1 - me];
   btn.classList.remove('hidden');
   if (iReq) {
     btn.disabled = true;
@@ -558,15 +698,18 @@ function leaveOnline() {
 function resetOnlineState() {
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   clearOnlineTimers();
+  hideGraceOverlay();
   online.code = null;
   online.m = null;
   online.view = null;
   online.viewKey = '';
   online._drawnKey = '';
   online._soundKey = '';
+  online._dcRegistered = false;
   online.endedShown = false;
   online.matchmaking = false;
   online.claiming = false;
+  online.quitting = false;
 }
 
 function enterOnline() {

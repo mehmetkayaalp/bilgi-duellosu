@@ -582,13 +582,22 @@ function showFact(resultText, isWin, factText) {
 
 // ---------- Bitiş ----------
 function showEndScreen(allStats) {
+  hideGraceOverlay();
   const G = window.GAME;
+  const ff = (G && typeof G.forfeit === 'function') ? G.forfeit() : null;
   const [s1, s2] = G.scores;
-  const tie = s1 === s2;
-  const winnerIdx = s1 >= s2 ? 0 : 1;
+  const tie = !ff && s1 === s2;
+  const winnerIdx = ff ? (ff.loserIdx === 0 ? 1 : 0) : (s1 >= s2 ? 0 : 1);
 
-  $('end-emoji').textContent = tie ? '🤝' : '🏆';
-  $('end-title').textContent = tie ? 'Berabere!' : `${G.players[winnerIdx]} kazandı!`;
+  if (ff) {
+    $('end-emoji').textContent = ff.mineLost ? '🏳️' : '🏆';
+    $('end-title').textContent = ff.mineLost
+      ? 'Pes ettin'
+      : `${G.players[winnerIdx]} kazandı! · Rakibin ayrıldı`;
+  } else {
+    $('end-emoji').textContent = tie ? '🤝' : '🏆';
+    $('end-title').textContent = tie ? 'Berabere!' : `${G.players[winnerIdx]} kazandı!`;
+  }
 
   $('final-scores').innerHTML = G.players
     .map((p, i) => {
@@ -615,7 +624,8 @@ function showEndScreen(allStats) {
   $('rematch-status').textContent = '';
 
   showScreen('screen-end');
-  if (!tie) { launchConfetti(); sfx.win(); } else { sfx.tap(); }
+  const lost = ff && ff.mineLost;
+  if (!tie && !lost) { launchConfetti(); sfx.win(); } else { sfx.tap(); }
 }
 
 function launchConfetti() {
@@ -657,3 +667,25 @@ $('btn-mute').addEventListener('click', () => {
   $('btn-mute').textContent = sfx.on ? '🔊' : '🔇';
   if (sfx.on) sfx.tap();
 });
+
+// Oyundan çık — denetleyiciye devredilir
+$('btn-quit').addEventListener('click', () => {
+  const G = window.GAME;
+  if (G && typeof G.quit === 'function') G.quit();
+});
+
+// Pes etme / bağlantı kopması bekleme ekranı yardımcıları
+function showGraceOverlay({ title, msg, sub, seconds }) {
+  $('grace-title').textContent = title || 'Bekleniyor…';
+  $('grace-msg').textContent = msg || '';
+  $('grace-sub').textContent = sub || '';
+  $('grace-count').textContent = String(seconds);
+  $('grace-overlay').classList.remove('hidden');
+}
+function updateGraceCount(seconds) {
+  const el = $('grace-count');
+  if (el) el.textContent = String(Math.max(0, seconds));
+}
+function hideGraceOverlay() {
+  $('grace-overlay').classList.add('hidden');
+}

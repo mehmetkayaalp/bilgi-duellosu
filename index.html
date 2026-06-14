@@ -183,6 +183,7 @@
 
   <!-- ======== OYUN EKRANI ======== -->
   <section id="screen-game" class="screen">
+    <button id="btn-quit" class="quit-btn" title="Oyundan çık" aria-label="Oyundan çık">🚪</button>
     <header id="scoreboard">
       <div class="player-score p1" id="score-box-1">
         <div class="avatar a1" id="avatar1">A</div>
@@ -263,6 +264,20 @@
       <button id="btn-restart" class="big-btn ghost">↺ &nbsp;Ana Menü</button>
     </div>
   </section>
+
+  <!-- Bağlantı kopması / pes etme bekleme ekranı -->
+  <div id="grace-overlay" class="grace-overlay hidden">
+    <div class="grace-card">
+      <div class="grace-icon">⏳</div>
+      <div id="grace-title" class="grace-title">Rakibin ayrıldı</div>
+      <div id="grace-msg" class="grace-msg">Geri dönmesi için bekleniyor…</div>
+      <div class="grace-count-wrap">
+        <span id="grace-count" class="grace-count">15</span>
+        <span class="grace-count-suffix">sn</span>
+      </div>
+      <div id="grace-sub" class="grace-sub">Süre dolarsa galibiyet senin!</div>
+    </div>
+  </div>
 
   <div id="confetti-layer"></div>
 
