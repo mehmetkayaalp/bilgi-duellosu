@@ -1,0 +1,21 @@
+{
+  "name": "bilgi-duellosu",
+  "version": "1.0.0",
+  "description": "Bilgi Düellosu — Türkçe iki kişilik bilgi yarışması (PWA + Capacitor native)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:www": "node scripts/build-www.mjs",
+    "sync": "npm run build:www && cap sync",
+    "ios": "npm run sync && cap open ios",
+    "android": "npm run sync && cap open android"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest"
+  },
+  "dependencies": {
+    "@capacitor/android": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/ios": "latest"
+  }
+}

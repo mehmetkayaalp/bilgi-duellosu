@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Bilgi Düellosu</string>
+    <string name="title_activity_main">Bilgi Düellosu</string>
+    <string name="package_name">com.mehmetkayaalp.bilgiduellosu</string>
+    <string name="custom_url_scheme">com.mehmetkayaalp.bilgiduellosu</string>
+</resources>

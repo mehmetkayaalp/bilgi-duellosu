@@ -288,7 +288,11 @@
   <script src="online.js"></script>
   <script src="game.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    // Service worker yalnızca web (PWA) sürümünde gerekli. Capacitor native
+    // kabuğunda uygulama zaten paketli; SW gereksiz ve cache karışıklığı
+    // yaratabilir, o yüzden native'de atlıyoruz.
+    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (!isNative && 'serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
     }
   </script>
