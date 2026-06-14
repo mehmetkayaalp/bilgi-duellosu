@@ -134,7 +134,7 @@ function updateScoreboard() {
   $('pscore1').textContent = G.scores[0];
   $('pscore2').textContent = G.scores[1];
   const diff = DIFFICULTIES[G.difficulty ?? 1];
-  $('progress').textContent = `${diff.icon} ${diff.name} · Kart ${Math.min(G.played + 1, G.totalCards)} / ${G.totalCards}`;
+  $('progress').textContent = `${diff.icon} ${diff.name} · Soru ${Math.min(G.played + 1, G.totalCards)} / ${G.totalCards}`;
   $('progress-fill').style.width = `${(G.played / G.totalCards) * 100}%`;
   $('score-box-1').classList.toggle('turn-active', G.turn === 0);
   $('score-box-2').classList.toggle('turn-active', G.turn === 1);
@@ -154,27 +154,30 @@ function setPlayersUI() {
   $('avatar2').textContent = initials(G.players[1]);
 }
 
+// İlerleme şeridi: her soru için bir kategori rozeti. Bitenler kazananın
+// rengiyle dolar, sıradaki altın çerçeveyle parlar, gelecekler soluk durur.
+// Kart seçimi yok; sorular sırayla otomatik gelir.
 function renderBoard() {
   const G = window.GAME;
   const board = $('board');
+  board.className = 'prog-strip';
   board.innerHTML = '';
 
   G.deck.forEach((card, i) => {
     const el = document.createElement('div');
-    el.className = 'board-card' + (card.used ? ` used flipped by-p${card.by + 1}` : '');
-    if (G.current === i && !card.used) el.classList.add('flipped');
-    el.innerHTML = `
-      <div class="inner">
-        <div class="face back"><span class="emblem">✦</span></div>
-        <div class="face front">
-          ${card.bonus ? '<span class="bonus-star">⭐2x</span>' : ''}
-          <span class="cat-icon">${CATEGORIES[card.cat].icon}</span>
-          <span>${CATEGORIES[card.cat].name}</span>
-        </div>
-      </div>
-      ${card.badge ? `<div class="result-badge ${card.badge.cls}">${card.badge.icon}</div>` : ''}`;
-
-    if (!card.used && G.canPick()) el.addEventListener('click', () => G.onPick(i));
+    let cls = 'prog-tile';
+    if (card.used) {
+      cls += ' done';
+      if (card.badge && card.badge.cls === 'draw') cls += ' draw';
+      else if (typeof card.by === 'number') cls += ` by-p${card.by + 1}`;
+    } else if (G.current === i) {
+      cls += ' active';
+    }
+    el.className = cls;
+    el.innerHTML =
+      `<span class="pt-icon">${CATEGORIES[card.cat].icon}</span>` +
+      (card.bonus ? '<span class="pt-bonus">⭐</span>' : '') +
+      (card.used && card.badge ? `<span class="pt-badge">${card.badge.icon}</span>` : '');
     board.appendChild(el);
   });
 }
@@ -184,10 +187,10 @@ function updateBoardMsg() {
   const mine = !G.isOnline || G.turn === G.myIndex;
   if (mine) {
     $('board-msg').innerHTML =
-      `Sıra sende, <span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span>! Bir kart seç 👇`;
+      `Sıra sende, <span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span>! Soru geliyor… 👀`;
   } else {
     $('board-msg').innerHTML =
-      `<span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> kart seçiyor… ⏳`;
+      `<span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> cevaplıyor… ⏳`;
   }
 }
 

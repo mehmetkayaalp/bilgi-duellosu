@@ -6,7 +6,7 @@
 
 const local = {
   players: ['Oyuncu 1', 'Oyuncu 2'],
-  totalCards: 10,
+  totalCards: 15,
   difficulty: 1,
   scores: [0, 0],
   turn: 0,
@@ -55,7 +55,7 @@ function buildLocalGAME() {
         local.duel = { found: [], writer: local.turn, over: false };
       }
       renderBoard();
-      setTimeout(() => openCard(), 750);
+      setTimeout(() => openCard(), 500);
     },
 
     commitSolo(result) {
@@ -129,7 +129,14 @@ function advanceLocal() {
     renderBoard();
     updateScoreboard();
     updateBoardMsg();
+    autoNextLocal();
   }
+}
+
+// Kart seçimi yok: sıradaki soruyu otomatik aç.
+function autoNextLocal() {
+  local.picking = false;
+  window.GAME.onPick(local.played);
 }
 
 // ---------- Kalıcı istatistik (localStorage) ----------
@@ -174,6 +181,7 @@ function startLocalGame() {
   renderBoard();
   updateScoreboard();
   updateBoardMsg();
+  autoNextLocal();
 }
 
 document.querySelectorAll('#screen-setup .round-btn').forEach((btn) => {

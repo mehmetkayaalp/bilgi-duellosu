@@ -400,106 +400,63 @@ body {
 .board-msg .turn-name.p1 { color: var(--p1); }
 .board-msg .turn-name.p2 { color: var(--p2); }
 
-#board {
+/* ---------- İlerleme şeridi (kart seçimi yok, sorular sırayla gelir) ---------- */
+#board.prog-strip {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 16px;
-  perspective: 1200px;
+  gap: 9px;
+  margin-bottom: 6px;
 }
 
-.board-card {
-  width: 104px;
-  height: 148px;
-  cursor: pointer;
-  position: relative;
-}
-.board-card .inner {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
-}
-.board-card.flipped .inner { transform: rotateY(180deg); }
-.board-card:not(.flipped):not(.used):hover .inner { transform: translateY(-12px) rotate(-2deg); }
-.board-card.used { cursor: default; }
-
-.board-card .face {
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  backface-visibility: hidden;
+.prog-tile {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  position: relative;
+  font-size: 1.1rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  opacity: 0.45;
+  transition: transform 0.25s, opacity 0.25s, box-shadow 0.25s, background 0.25s;
+}
+.prog-tile .pt-icon { line-height: 1; }
+.prog-tile.done { opacity: 1; }
+.prog-tile.by-p1 { background: var(--p1); border-color: var(--p1); }
+.prog-tile.by-p2 { background: var(--p2); border-color: var(--p2); }
+.prog-tile.draw  { background: var(--gold); border-color: var(--gold); }
+
+.prog-tile.active {
+  opacity: 1;
+  background: rgba(255, 209, 102, 0.22);
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 14px rgba(255, 209, 102, 0.55);
+  transform: scale(1.2);
 }
 
-.board-card .back {
-  background:
-    radial-gradient(circle at 50% 38%, rgba(255, 209, 102, 0.22), transparent 55%),
-    linear-gradient(160deg, #5b35ad, #3c1f7e);
-  border: 2px solid rgba(255, 209, 102, 0.75);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4), inset 0 0 0 5px rgba(255, 255, 255, 0.06);
-  color: var(--gold);
-}
-.board-card .back::after {
-  content: '';
+.prog-tile .pt-bonus {
   position: absolute;
-  inset: 9px;
-  border: 1.5px dashed rgba(255, 209, 102, 0.5);
-  border-radius: 9px;
-}
-.board-card .back .emblem { font-size: 2rem; text-shadow: 0 0 18px rgba(255, 209, 102, 0.6); }
-
-.board-card .front {
-  background: linear-gradient(160deg, #fff, #ece7fb);
-  color: var(--ink);
-  transform: rotateY(180deg);
-  border: 2px solid rgba(255, 209, 102, 0.9);
-  font-weight: 700;
-  font-size: 0.78rem;
-  text-align: center;
-  padding: 8px 6px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
-}
-.board-card .front .cat-icon { font-size: 2.1rem; }
-
-.bonus-star {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  background: linear-gradient(135deg, var(--gold), var(--gold-deep));
-  color: var(--ink);
+  top: -8px;
+  right: -5px;
   font-size: 0.62rem;
-  font-weight: 800;
-  padding: 2px 7px;
-  border-radius: 999px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.25);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
-
-/* Oynanmış kart */
-.board-card.used .front { opacity: 0.92; }
-.board-card.used.by-p1 .front { border-color: var(--p1); box-shadow: 0 6px 18px var(--p1-soft); }
-.board-card.used.by-p2 .front { border-color: var(--p2); box-shadow: 0 6px 18px var(--p2-soft); }
-
-.result-badge {
+.prog-tile .pt-badge {
   position: absolute;
-  top: -9px;
-  right: -9px;
-  width: 30px; height: 30px;
+  bottom: -6px;
+  right: -6px;
+  width: 17px; height: 17px;
   border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.95rem;
   background: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  z-index: 2;
+  color: var(--ink);
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
-.result-badge.p1 { background: linear-gradient(135deg, var(--p1), #c2335a); color: #fff; }
-.result-badge.p2 { background: linear-gradient(135deg, var(--p2), #2a6fd4); color: #fff; }
-.result-badge.no { background: #76708f; color: #fff; }
-.result-badge.draw { background: var(--gold); }
 
 /* ---------- Soru modalı ---------- */
 .overlay {
@@ -832,10 +789,8 @@ body {
 /* ---------- Mobil ---------- */
 @media (max-width: 560px) {
   #q-options { grid-template-columns: 1fr; }
-  .board-card { width: 76px; height: 110px; }
-  .board-card .back .emblem { font-size: 1.5rem; }
-  .board-card .front .cat-icon { font-size: 1.5rem; }
-  .board-card .front { font-size: 0.62rem; }
+  #board.prog-strip { gap: 7px; }
+  .prog-tile { width: 31px; height: 31px; font-size: 0.98rem; border-radius: 9px; }
   .player-score { min-width: 0; padding: 8px 10px; }
   .pname { max-width: 72px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .q-flag { font-size: 4.5rem; }

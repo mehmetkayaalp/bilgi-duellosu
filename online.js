@@ -9,7 +9,7 @@
 const online = {
   code: null,
   pid: null,
-  totalCards: 10,
+  totalCards: 15,
   difficulty: 1,        // Arkadaşınla Oyna (oda kodu) modunda tek zorluk
   difficulties: [1],    // Hızlı Eşleşme modunda kabul edilen zorluklar (çoklu)
   m: null,        // son normalize edilmiş oda durumu (ayna)
@@ -261,6 +261,14 @@ function onRoomSnapshot(raw) {
     online.lastQKey = '';
     online.lastFactKey = '';
     updateBoardMsg();
+    // Kart seçimi yok: sıradaki oyuncu soruyu otomatik açar (DB'ye yazar),
+    // rakip anlık güncellemeyle görür.
+    if (window.GAME.canPick()) {
+      const next = online.m.played;
+      setTimeout(() => {
+        if (window.GAME.canPick() && online.m.phase === 'pick') window.GAME.onPick(next);
+      }, 550);
+    }
     return;
   }
 
@@ -574,7 +582,7 @@ async function createWaitingMatchRoom(name) {
     // Geçici zorluk: kapan kişi bunu kesişimden seçtiğinde günceller
     difficulty: diffs[0],
     difficulties: diffs,
-    totalCards: 10,
+    totalCards: 15,
     names: { p0: name }, ids: { p0: online.pid },
     turn: 0, played: 0, current: -1, phase: 'pick',
   });
