@@ -244,7 +244,7 @@ const DATA = {
     // ---- Kolay (d: 1) ----
     { question: 'Süper Lig\'in ilk (1959) şampiyonu hangi takımdır?', answer: 'Fenerbahçe', wrong: ['Galatasaray', 'Beşiktaş', 'Trabzonspor'], fact: '1959\'da Milli Lig adıyla başlayan organizasyonun ilk şampiyonu Fenerbahçe oldu.', d: 1 },
     { question: 'Galatasaray hangi yıl UEFA Kupası\'nı kazandı?', answer: '2000', wrong: ['1998', '2002', '2008'], fact: '17 Mayıs 2000\'de Kopenhag\'da Arsenal\'i penaltılarla yenerek kazandı; bir Türk takımının ilk Avrupa kupasıdır.', d: 1 },
-    { question: '"Üç büyükler" denilen İstanbul kulüpleri Galatasaray, Fenerbahçe ve hangisidir?', answer: 'Beşiktaş', wrong: ['İstanbulspor', 'Kasımpaşa', 'Başakşehir'], fact: '"Üç büyükler" terimi Galatasaray, Fenerbahçe ve Beşiktaş için kullanılır.', d: 1 },
+    { question: 'Aşağıdakilerden hangisi "Üç Büyükler"den değildir?', answer: 'Başakşehir', wrong: ['Galatasaray', 'Fenerbahçe', 'Beşiktaş'], fact: '"Üç büyükler" terimi Galatasaray, Fenerbahçe ve Beşiktaş için kullanılır. Başakşehir 1990\'da kuruldu.', d: 1 },
     { question: '1903 yılında kurulan, Türkiye\'nin en eski spor kulüplerinden biri olan takım hangisidir?', answer: 'Beşiktaş', wrong: ['Galatasaray', 'Fenerbahçe', 'Trabzonspor'], fact: 'Beşiktaş 19 Mart 1903\'te kuruldu; Galatasaray 1905, Fenerbahçe 1907\'dedir.', d: 1 },
 
     // ---- Doğru/Yanlış havasında olanlar Kolay'a ----

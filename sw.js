@@ -2,7 +2,7 @@
 // Strateji: önce ağ, başarısız olursa önbellek (geliştirme sırasında
 // dosyalar bayatlamaz, internet yokken oyun yine de açılır).
 
-const CACHE = 'bilgi-duellosu-v7';
+const CACHE = 'bilgi-duellosu-v8';
 const ASSETS = [
   './',
   'index.html',
