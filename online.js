@@ -794,8 +794,28 @@ function renderMatchWaiting() {
 }
 
 async function tryClaim(code, name, myDiffs) {
+  // Firebase runTransaction client'in local cache'ini kullanır. Karşı
+  // odaya hiç subscribe olmadıysak cache boş → mutator null görür →
+  // undefined döndürüp transaction iptal olur. Bu yüzden:
+  //   1) subscribe ol, ilk snapshot'ı bekle (cache dolsun)
+  //   2) subscription'ı AYAKTA TUTARAK runTransaction çağır
+  //      (unsub etmek cache'i temizliyor!)
+  //   3) transaction tamamlandıktan SONRA unsub et
+  const { ref, onValue, runTransaction } = Net.fns;
+  const roomRef = ref(Net.db, Net.roomPath(code));
+  let unsub = null;
   try {
-    const res = await Net.claim(code, (room) => {
+    await new Promise((resolve) => {
+      let gotFirst = false;
+      unsub = onValue(roomRef, () => {
+        if (gotFirst) return;
+        gotFirst = true;
+        resolve();
+      }, () => resolve());
+      // Güvenlik valfi: 2 sn'de bir şey gelmezse yine devam et.
+      setTimeout(resolve, 2000);
+    });
+    const res = await runTransaction(roomRef, (room) => {
       if (!room) return;
       if (room.status !== 'waiting') return;
       if (room.ids && room.ids.p1) return;
@@ -813,7 +833,12 @@ async function tryClaim(code, name, myDiffs) {
     });
     const v = res.committed && res.snapshot.val();
     return !!(v && v.ids && v.ids.p1 === online.pid);
-  } catch (e) { return false; }
+  } catch (e) {
+    console.warn('tryClaim hatası:', e);
+    return false;
+  } finally {
+    if (unsub) { try { unsub(); } catch {} }
+  }
 }
 
 async function startClaimedGame(code) {
