@@ -79,7 +79,19 @@ function formatYear(y) {
 }
 
 function initials(name) {
-  return (name || '').trim().charAt(0).toLocaleUpperCase('tr') || '?';
+  return esc((name || '').trim().charAt(0).toLocaleUpperCase('tr') || '?');
+}
+
+// HTML kaçışlama — kullanıcı kontrollü metinler (özellikle online'da
+// rakibin ismi) innerHTML'e girmeden önce buradan geçmeli. Aksi halde
+// rakip ismini "<img onerror=...>" yapıp karşı cihazda kod çalıştırabilir.
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Bir kategorinin, seçilen zorluktaki soru indekslerini döndürür.
@@ -218,10 +230,10 @@ function updateBoardMsg() {
   const mine = !G.isOnline || G.turn === G.myIndex;
   if (mine) {
     $('board-msg').innerHTML =
-      `Sıra sende, <span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span>! Bir kart seç 👇`;
+      `Sıra sende, <span class="turn-name p${G.turn + 1}">${esc(G.players[G.turn])}</span>! Bir kart seç 👇`;
   } else {
     $('board-msg').innerHTML =
-      `<span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> kart seçiyor… ⏳`;
+      `<span class="turn-name p${G.turn + 1}">${esc(G.players[G.turn])}</span> kart seçiyor… ⏳`;
   }
 }
 
@@ -294,7 +306,7 @@ function renderReadonly(cat, q) {
   else if (cat === 'dogruYanlis') body = `<p class="q-text">${q.statement}</p>`;
   else if (cat === 'eski') body = `<p class="q-text">⏳ Hangisi daha önce oldu?</p>`;
   $('q-body').innerHTML =
-    `<p class="spectate-note">✍️ <span class="turn-name p${G.turn + 1}">${G.players[G.turn]}</span> yanıtlıyor…</p>${body}`;
+    `<p class="spectate-note">✍️ <span class="turn-name p${G.turn + 1}">${esc(G.players[G.turn])}</span> yanıtlıyor…</p>${body}`;
 
   const box = $('q-options');
   box.className = '';
@@ -612,7 +624,7 @@ function showEndScreen(allStats) {
         : '';
       return `
       <div class="final-card ${!tie && i === winnerIdx ? 'winner' : ''}">
-        <div class="fname">${p}</div>
+        <div class="fname">${esc(p)}</div>
         <div class="fscore">${G.scores[i]}</div>
         <div class="karne">${karne}</div>
         ${allLine ? `<div class="alltime">${allLine}</div>` : ''}

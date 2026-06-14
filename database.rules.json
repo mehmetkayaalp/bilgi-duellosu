@@ -1,16 +1,28 @@
 {
   "rules": {
+    ".read": false,
+    ".write": false,
+
     "rooms": {
       "$code": {
-        ".read": true,
-        ".write": true,
-        ".validate": "$code.matches(/^[0-9]{6}$/)"
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "$code.matches(/^[0-9]{6}$/)",
+        "names": {
+          "p0": { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "p1": { ".validate": "newData.isString() && newData.val().length <= 20" }
+        },
+        "scores": {
+          "$i": { ".validate": "newData.isNumber()" }
+        },
+        "$other": { ".validate": true }
       }
     },
+
     "matchmaking": {
-      ".read": true,
+      ".read": "auth != null",
       "$code": {
-        ".write": true,
+        ".write": "auth != null",
         ".validate": "$code.matches(/^[0-9]{6}$/)"
       }
     }

@@ -29,6 +29,19 @@ const Net = {
       get: dbMod.get, child: dbMod.child, onDisconnect: dbMod.onDisconnect, remove: dbMod.remove,
       runTransaction: dbMod.runTransaction,
     };
+
+    // Anonim kimlik doğrulama — RTDB kuralları "auth != null" istiyor.
+    // Böylece public Firebase config'iyle gelişigüzel okuma/yazma engellenir.
+    // Konsolda Anonymous Auth açık değilse bu hata verir; oyunu hard-kırmamak
+    // için yutuyoruz (eski açık kurallarla çalışmaya devam eder), ama uyarırız.
+    try {
+      const authMod = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+      const auth = authMod.getAuth(app);
+      await authMod.signInAnonymously(auth);
+      this.uid = auth.currentUser?.uid || null;
+    } catch (e) {
+      console.warn('[Net] Anonim giriş başarısız (Firebase konsolunda Anonymous Auth açık mı?):', e?.code || e);
+    }
   },
 
   // Bir alt yolun anlık değerini oku (örn. "matchmaking")

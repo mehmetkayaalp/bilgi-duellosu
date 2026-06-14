@@ -46,6 +46,13 @@ function getPid() {
 
 function clone(x) { return x ? JSON.parse(JSON.stringify(x)) : x; }
 
+// Rakipten gelen ismi sınırla — kötü niyetli bir oyuncu Firebase'e
+// doğrudan devasa bir isim yazıp arayüzü bozmaya / DoS'a çalışabilir.
+function clampName(v, fallback) {
+  if (typeof v !== 'string' || !v.trim()) return fallback;
+  return v.trim().slice(0, 20);
+}
+
 function normalizeRoom(r) {
   return {
     status: r.status,
@@ -53,7 +60,7 @@ function normalizeRoom(r) {
     totalCards: r.totalCards || 15,
     difficulty: typeof r.difficulty === 'number' ? r.difficulty : 1,
     difficulties: r.difficulties || null,
-    names: [r.names?.p0 || 'Oyuncu 1', r.names?.p1 || 'Bekleniyor…'],
+    names: [clampName(r.names?.p0, 'Oyuncu 1'), clampName(r.names?.p1, 'Bekleniyor…')],
     ids: [r.ids?.p0 || null, r.ids?.p1 || null],
     scores: r.scores || [0, 0],
     stats: r.stats ? [r.stats[0] || {}, r.stats[1] || {}] : [{}, {}],
@@ -567,7 +574,7 @@ function renderSimulReveal() {
     const a = m.answers[i];
     const mark = a ? (a.correct ? '✓' : '✗') : '⏳';
     const pts = m.gained[i] > 0 ? ` +${m.gained[i]}` : '';
-    return `<span class="rv-name p${i + 1}">${m.names[i]}</span> ${mark}${pts}`;
+    return `<span class="rv-name p${i + 1}">${esc(m.names[i])}</span> ${mark}${pts}`;
   };
   $('fact-result').innerHTML = `${tag(0)} &nbsp;·&nbsp; ${tag(1)}`;
   $('fact-result').className = '';
@@ -1027,7 +1034,7 @@ function renderLobbyRoom() {
       const filled = online.m.ids[i];
       return `<div class="room-player p${i + 1} ${filled ? '' : 'empty'}">
         <div class="avatar a${i + 1}">${filled ? initials(n) : '…'}</div>
-        <span>${filled ? n : 'Bekleniyor…'}</span>
+        <span>${filled ? esc(n) : 'Bekleniyor…'}</span>
         ${online.m.host === online.m.ids[i] ? '<small>👑 kurucu</small>' : ''}
       </div>`;
     })
