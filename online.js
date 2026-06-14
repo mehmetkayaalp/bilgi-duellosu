@@ -35,7 +35,12 @@ const online = {
 
 function getPid() {
   let p = sessionStorage.getItem('bd-pid');
-  if (!p) { p = 'p' + Math.random().toString(36).slice(2, 10); sessionStorage.setItem('bd-pid', p); }
+  // Çakışmaya neredeyse imkân tanımayan, daha uzun + zaman damgalı pid.
+  // Eski (8 karakter civarı) pid'leri görürse yeniler.
+  if (!p || p.length < 14) {
+    p = 'p' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    sessionStorage.setItem('bd-pid', p);
+  }
   return p;
 }
 
@@ -895,7 +900,11 @@ async function createWaitingMatchRoom(name) {
 function watchQueueWhileWaiting(name) {
   if (online.queueUnsub) { try { online.queueUnsub(); } catch {} online.queueUnsub = null; }
   online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
-    if (!online.matchmaking || !online.code || online.claiming) return;
+    if (!online.matchmaking || !online.code) return;
+    // claiming kilidi 10 sn'den uzun sürerse askıda kalmış demektir,
+    // resetleyip yeniden değerlendir (deadlock guard).
+    if (online.claiming && Date.now() - (online.claimingAt || 0) < 10000) return;
+    if (online.claiming) { online.claiming = false; console.warn('[matchmaking] claiming kilidi zaman aşımı, sıfırlandı'); }
     queue = queue || {};
     // Başka bir aday hata sonucu kuyruk kaydımızı silmiş olabilir
     // (race cleanup). Hâlâ bekliyorken kendimizi yeniden ekle.
@@ -911,16 +920,30 @@ function watchQueueWhileWaiting(name) {
       ? `Kuyrukta ${others.length + 1} kişi · uygun zorluk aranıyor…`
       : 'Şu an başka bekleyen yok. İlk gelene eşleşeceksin.';
     const myDiffs = [...online.difficulties];
+    const myEntry = queue[online.code];
     const cands = others.filter((c) => {
       const e = queue[c];
-      if (e.host >= online.pid) return false;
-      return queueDiffs(e).some((d) => myDiffs.includes(d));
+      if (!queueDiffs(e).some((d) => myDiffs.includes(d))) return false;
+      // Tiebreak — herhangi bir senaryoda kilitlenmemek için iki katmanlı:
+      //   1) Sonradan kuyruğa girenler önce claim atar (önceki bekleyen
+      //      claim edilmeye razıdır). ts daha büyük olan claim atar.
+      //   2) ts eşitse pid lexicographic karşılaştırma.
+      if (myEntry && typeof e.ts === 'number' && typeof myEntry.ts === 'number') {
+        if (e.ts > myEntry.ts) return false;  // o daha yeni → o claim eder
+        if (e.ts < myEntry.ts) return true;   // biz daha yeniyiz → biz claim ederiz
+      }
+      // ts eksik / eşit → pid tiebreak (büyük pid claim eder).
+      return e.host < online.pid;
     });
+    console.log('[matchmaking] queue:', Object.keys(queue), 'others:', others, 'cands:', cands, 'me:', online.pid.slice(0, 8));
     if (cands.length === 0) return;
     online.claiming = true;
+    online.claimingAt = Date.now();
     (async () => {
       for (const code of cands) {
-        if (await tryClaim(code, name, myDiffs)) {
+        const ok = await tryClaim(code, name, myDiffs);
+        console.log('[matchmaking] tryClaim', code, '→', ok);
+        if (ok) {
           await teardownMyWaitingRoom();
           await startClaimedGame(code);
           return;
