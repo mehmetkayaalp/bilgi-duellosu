@@ -859,7 +859,12 @@ async function quickMatch() {
     });
     for (const code of shuffle(candidates)) {
       if (await tryClaim(code, name, myDiffs)) { await startClaimedGame(code); return; }
-      await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
+      // Claim başarısızsa — odanın gerçekten ölü olduğunu doğrulamadan
+      // matchmaking kaydını silme (race condition: oda yazısı henüz
+      // replicate olmamış olabilir → host'u kuyruktan boşuna düşürmeyelim).
+      const room = await Net.getRoom(code).catch(() => null);
+      const dead = !room || room.status !== 'waiting' || (room.ids && room.ids.p1);
+      if (dead) await Net.setPath(`matchmaking/${code}`, null).catch(() => {});
     }
     await createWaitingMatchRoom(name);
   } catch (e) { netErr(e); showMatchSetup(); }
@@ -892,6 +897,14 @@ function watchQueueWhileWaiting(name) {
   online.queueUnsub = Net.subscribePath('matchmaking', (queue) => {
     if (!online.matchmaking || !online.code || online.claiming) return;
     queue = queue || {};
+    // Başka bir aday hata sonucu kuyruk kaydımızı silmiş olabilir
+    // (race cleanup). Hâlâ bekliyorken kendimizi yeniden ekle.
+    if (!queue[online.code]) {
+      Net.setPath(`matchmaking/${online.code}`, {
+        host: online.pid, diffs: [...online.difficulties], ts: Date.now(),
+      }).catch(() => {});
+      return; // bir sonraki snapshot'ta normal akışa devam
+    }
     const others = Object.keys(queue).filter((c) => c !== online.code && queue[c] && queue[c].host);
     const sub = $('match-sub');
     if (sub) sub.textContent = others.length
